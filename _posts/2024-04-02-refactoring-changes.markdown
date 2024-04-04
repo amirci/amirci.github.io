@@ -159,20 +159,18 @@ a way that captures the intention behind each change and makes the states that c
 ```ts
 
 type ColumnName = string;
-// Possible values for the type of change
-type ChangeType = 'remove' | 'add' | 'rename' | 'delete' | 'none';
-// A discrimination must have a `type`
-type ChangeTypeDiscriminator = { type: ChangeType };
+type RemoveColumn = { type: 'remove'; target: ColumnName };
+type AddColumn = { type: 'add'; target: ColumnName };
+type RenameColumn = { type: 'rename'; newName: ColumnName; oldName: ColumnName };
 
-// Each kind of change, they all must have a `ChangeTypeDiscriminator`
-type RemoveColumn = { type: 'remove'; target: ColumnName } & ChangeTypeDiscriminator;
-type AddColumn = { type: 'add'; target: ColumnName } & ChangeTypeDiscriminator;
-type RenameColumn = { type: 'rename'; target: ColumnName; source: ColumnName } & ChangeTypeDiscriminator;
-type DeleteColumn = { type: 'delete'; target: ColumnName } & ChangeTypeDiscriminator;
+// Possible values for the type of change
+type ValidColumnChange = RemoveColumn | AddColumn | RenameColumn;
+
+// But sometimes we have change that should be ignored
 type NoChange = { type: 'none' };
 
-// Type that contains all the changes
-type ColumnChange = RemoveColumn | AddColumn | RenameColumn | DeleteColumn | NoChange;
+// The actual type combines both
+type ColumnChange = ValidColumnChange | NoChange;
 
 ```
 
@@ -274,36 +272,66 @@ by identified each _kind_ of change.
 The new function signature will look something like this:
 
 ```ts
-  const getChangeFunc = (change: ColumChange): ??? => ...
+const getChangeFunc = (change: ColumChange): ??? => ...
 ```
 
 But we are going to call the function only for changes that are valid, so we can use the `ValidColumnChange` type instead.
 
-Every opportunity that we can find to narrow the domain of a type is a chance to improve the code for reading.
+Every opportunity to narrow the domain of a type is a chance to improve the code for reading.
 
 Now the signature changed to:
 
 ```ts
-  const getChangeFunc = (change: ValidColumChange): ??? => ...
+const getChangeFunc = (change: ValidColumChange): ??? => ...
 ```
 
 
+We could take advantage that the `ColumnChange` type has a `type` discriminator field, and write something
+like this to obtain the function that will actually do the update:
 
-We could take advantage that the `ColumnChange` type has a `type` discriminator field, and write something like:
 
 ```ts
-switch(change.type) {
-  case 'add': 
+  switch (change.type) {
+    case 'add':
+      return addCol(change);
+    case 'remove':
+      return deleteCol(change);
+    case 'rename':
+      return renameCol(change);
+  }
+```
+
+However, considering that `addCol`, `deleteCol`, etc, all return the same _kind_ of function perhaps there's
+a way to avoid a bit of repetition. 
+
+Luckily we can use [ts-pattern](https://github.com/gvergnaud/ts-pattern) for that:
+
+```ts
+const changeToUpdateFn = (change: ValidColumnChange): UpdateFn =>
+  match(change)
+    .with({ type: 'add' }, addCol) // when matching calls a function with the `change`
+    .with({ type: 'rename' }, renameCol)
+    .with({ type: 'remove' }, deleteCol)
+    .exhaustive();
+
+```
+
+The last bit is to have a function that helps us filter the valid changes. We can use a TS 
+[type guard](https://www.typescriptlang.org/docs/handbook/advanced-types.html) that helps with the conversion:
+
+```ts
+function isValidChange(change: ColumnChange): change is ValidColumnChange {
+  return change.type != 'none';
 }
 ```
 
-
+Putting all together (and renaming the function to be a bit more descriptive) we get:
 
 ```ts
 const applyChangesToTable = (tableInfo: TableInfo[], changes: readonly ColumnChange[], idx: number) => {
   return pipe(
     changes,
-    ROA.filter(isChange),
+    ROA.filter(isValidChange),
     ROA.map(changeToUpdateFn),
     ROA.reduce(tableInfo, (table: TableInfo[], updateFn: UpdateFn) => updateFn(table, idx))
   );
