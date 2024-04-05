@@ -10,9 +10,9 @@ categories: refactoring
 The refactoring story today is about a UI editor for a table of _Students_ that lets a user
 add, rename and remove columns.
 
-To do so it generates a series of changes that have to be applied and saved to the database.
+The result of an operation is a series of changes that have to be applied and saved to the database.
 
-We will skip the _React_ portion of the code and we will focus on how to model the changes and the update process.
+I will skip the _React_ portion of the code and focus on how to model the changes with types and simplify the update process.
 
 NOTE: The code uses [fp-ts](https://gcanti.github.io/fp-ts/) types and functions. You can see the functions or namespaces imported at the top.
 
@@ -112,11 +112,12 @@ const changeExistingStudentsTable = (tableInfo: any, columnChanges: any, idx: nu
 
 ## Identifying candidates for refactoring
 
-I noticed first (before reading the body of the function) that the _signature_ uses the type `any` for each of the arguments.
+I noticed that the _signature_  of `changeExistingStudentsTable` uses the type `any` for each of the arguments.
 
-Perhaps we could _narrow_ the types to make it more specific to the actual possible values. Plus one for modeling with types!
+Perhaps I could _narrow_ the types to make it more specific to the actual possible values. Plus one for modeling with types!
 
-Looking at how the arguments are used in the main function, it looks like we could create a `Student` type that can have _properties_ and then a `StudentTable` that contains the columns and a collection of values (rows).
+Looking at how the arguments are used in the main function, seems like a good idea to create a `Student` type
+and a `StudentTable` type that contains the _columns_ and a collection of _values_ (rows).
 
 
 ```ts
@@ -141,7 +142,7 @@ const table: StudentTable = {
 
 ```
 
-The changes could also be captured in a type, something like:
+The changes seem to be a type with the following fields (I call it _legacy_ to mark the difference later with the refactored version):
 
 ```ts
 type LegacyColumnChange = {
@@ -153,7 +154,7 @@ type LegacyColumnChange = {
 ```
 
 However, having all fields optional hints that some combinations are probably are invalid. We can try to represent the changes in
-a way that captures the intention behind each change and makes the states that cannot be valid impossible to build.
+a way that captures the intention behind each change and makes the states that cannot be valid not possible.
 
 
 ```ts
@@ -166,7 +167,7 @@ type RenameColumn = { type: 'rename'; newName: ColumnName; oldName: ColumnName }
 // Possible values for the type of change
 type ValidColumnChange = RemoveColumn | AddColumn | RenameColumn;
 
-// But sometimes we have change that should be ignored
+// But sometimes a change should be ignored
 type NoChange = { type: 'none' };
 
 // The actual type combines both
@@ -179,18 +180,20 @@ Good first step, however the code relies on the _logic_ behind the combination o
 For example the column `current` and `deleted` may both be set to indicated that the column
 was added but deleted after.
 
-Instead of _encoding_ the business logic of the change in the combination we could use the types
-defined [above][#] to have clear data that represents each change.
+Instead of _encoding_ the business logic of the change in the combination I could use the types
+defined [above][#however-having-all-fields-optional-hints-that-some-combinations] to have clear data that represents each change.
 
-Because each _legacy_ change seems to perhaps be one or more actual changes, we could create
+Because each _legacy_ change seems to perhaps be one or more actual changes, I could create
 a function that given a _legacy_ change returns a `ColumnChange`.
 
 Something like:
 
+```ts
 // Converts a legacy change to a well defined change
-function legacyToChange(change: LegacyColumnChange): ColumnChange {
-  // we will skip this for now
+function legacyToChange(change: LegacyColumnChange): readonly ColumnChange[] {
+  // skip this for now
 }
+```
 
 
 ### The body of the function
@@ -243,10 +246,10 @@ const changeExistingStudentsTable = (tableInfo: StudentsTable[], changes: readon
 };
 ```
 
-I like the general idea. There is a collection of changes and we need to _apply_ them to a `StudentTable` to
+I like the general idea. There is a collection of changes that need to be _applied_ to a `StudentTable` to
 obtain a new `StudentTable`.
 
-That idea pretty much looks like a `reduce` because we are _folding_ all the changes into a an existing _table_ to create
+That idea pretty much looks like a `reduce` because the changes are _folded_ into a an existing _table_ to create
 a new version.
 
 The steps are:
@@ -278,8 +281,7 @@ const getChangeFunc = (columnChange: any): any => {
 };
 ```
 
-First of all we have a new type to represent the change. The type helps to capture some of the logic that was coded before
-by identified each _kind_ of change.
+I already created types to represent the change and a way to convert the legacy change into those types.
 
 The new function signature will look something like this:
 
@@ -287,7 +289,7 @@ The new function signature will look something like this:
 const getChangeFunc = (change: ColumChange): ??? => ...
 ```
 
-We can add some types to represent the functions that will do the change:
+Let's add some types to represent the functions that will do the actual change:
 
 ```ts
 type UpdateFn = (tables: StudentTable[], idx: number) => StudentTable[];
@@ -295,7 +297,7 @@ type UpdateFn = (tables: StudentTable[], idx: number) => StudentTable[];
 type ChangeMapFn = (change: ColumnChange) => UpdateFn;
 ```
 
-But we are going to call the function only for changes that are valid, so we can use the `ValidColumnChange` type instead.
+But the function will be called only for changes that are valid, thus I can use the `ValidColumnChange` type instead.
 
 Every opportunity to narrow the domain of a type is a chance to improve the code for reading.
 
@@ -306,8 +308,8 @@ Now the signature changed to:
 const getChangeFunc = (change: ValidColumChange): UpdateFn => ...
 ```
 
-We could take advantage that the `ColumnChange` type has a `type` discriminator field, and write something
-like this to obtain the function that will actually do the update:
+I could take advantage that the `ColumnChange` type has a `type` discriminator field, and write 
+a `switch` to obtain the function that will actually do the update:
 
 
 ```ts
@@ -321,8 +323,8 @@ like this to obtain the function that will actually do the update:
   }
 ```
 
-However, considering that `addCol`, `deleteCol`, etc, all return the same _kind_ of function perhaps there's
-a way to avoid a bit of repetition. 
+However, considering that `addCol`, `deleteCol`, etc, all return the same _kind_ of function perhaps there is
+a way to avoid a bit repeating the last `return` at the end of each branch.
 
 Luckily we can use [ts-pattern](https://github.com/gvergnaud/ts-pattern) for that:
 
@@ -536,15 +538,16 @@ function isValidChange(change: ColumnChange): change is ValidColumnChange {
 }
 
 // Converts a legacy change to a well defined change
-function legacyToChange(change: LegacyColumnChange): ColumnChange {
-  throw new Error('Function not implemented.');
+function legacyToChange(change: LegacyColumnChange): readonly ColumnChange[] {
+  // pending
+  return [];
 }
 
 // The main function that applies the changes to the table
 export const applyChangesToTable = (tableInfo: StudentsTable[], changes: readonly ColumnChange[], idx: number) => {
   return pipe(
     changes,
-    ROA.map(legacyToChange),
+    ROA.flatMap(legacyToChange),
     ROA.filter(isValidChange),
     ROA.map(changeToUpdateFn),
     ROA.reduce(tableInfo, (table: StudentsTable[], fn: UpdateFn) => fn(table, idx))
