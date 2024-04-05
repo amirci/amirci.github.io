@@ -5,7 +5,7 @@ date:   2024-04-02 00:16:58 -0700
 categories: refactoring
 ---
 
-## The problem
+## Introduction
 
 The refactoring story today is about a UI editor for a table of _Students_ that lets a user
 add, rename and remove columns.
@@ -144,7 +144,7 @@ const table: StudentTable = {
 The changes could also be captured in a type, something like:
 
 ```ts
-type ColumnChange = {
+type LegacyColumnChange = {
   deleted?: string;
   original?: string;
   current?: string;
@@ -173,6 +173,25 @@ type NoChange = { type: 'none' };
 type ColumnChange = ValidColumnChange | NoChange;
 
 ```
+
+Good first step, however the code relies on the _logic_ behind the combination of the fields.
+
+For example the column `current` and `deleted` may both be set to indicated that the column
+was added but deleted after.
+
+Instead of _encoding_ the business logic of the change in the combination we could use the types
+defined [above][#] to have clear data that represents each change.
+
+Because each _legacy_ change seems to perhaps be one or more actual changes, we could create
+a function that given a _legacy_ change returns a `ColumnChange`.
+
+Something like:
+
+// Converts a legacy change to a well defined change
+function legacyToChange(change: LegacyColumnChange): ColumnChange {
+  // we will skip this for now
+}
+
 
 ### The body of the function
 
@@ -439,9 +458,10 @@ Here is all the code together:
 
 
 ```ts
+type Student = Record<string, unknown>;
 type ColumnName = string;
 type ColumnNames = readonly ColumnName[];
-type Values = readonly Record<ColumnName, unknown>[];
+type Values = readonly Student[];
 
 type StudentsTable = {
   columns: ColumnNames;
@@ -515,10 +535,16 @@ function isValidChange(change: ColumnChange): change is ValidColumnChange {
   return change.type != 'none';
 }
 
+// Converts a legacy change to a well defined change
+function legacyToChange(change: LegacyColumnChange): ColumnChange {
+  throw new Error('Function not implemented.');
+}
+
 // The main function that applies the changes to the table
 export const applyChangesToTable = (tableInfo: StudentsTable[], changes: readonly ColumnChange[], idx: number) => {
   return pipe(
     changes,
+    ROA.map(legacyToChange),
     ROA.filter(isValidChange),
     ROA.map(changeToUpdateFn),
     ROA.reduce(tableInfo, (table: StudentsTable[], fn: UpdateFn) => fn(table, idx))
