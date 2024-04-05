@@ -176,41 +176,41 @@ type ColumnChange = ValidColumnChange | NoChange;
 
 ### The body of the function
 
-Here's a simplified version to show what the body does. I removed the body of the functions declared at the top and
-added some comments to clarify.
+Here is a simplified version of the code to highlight the structure of the body.
+I removed the body of the functions declared at the top and added some comments to clarify.
 
-I am also using the types I defined above.
+I am also using the types I defined above and moved the function declarations outside.
 
 ```ts
+const isChange = (columnChange: any): boolean => ...
+
+const mergeCol = (sourceCol: string, targetCol: string, needDeleteSourceCol: boolean) => (d: any) => ...;
+
+const deleteCol = (deletedCol: string, isExist: boolean) => (d: any) => ...;
+
+const addCol = (newCol: string) => (d: any) => ...;
+
+const renameCol = (oldName: string, newName: string) => (d: any) => ...;
+
+// This function returns, given a change, another function that will apply the change to the
+// selected students table
+const getChangeFunc = (columnChange: any): any => {
+  if (columnChange.mergedCol) {
+    return mergeCol(
+      columnChange.current,
+      columnChange.mergedCol,
+      Boolean(columnChange.original),
+    );
+  } else if (columnChange.deleted) {
+    return deleteCol(columnChange.original, Boolean(columnChange.original));
+  } else if (!columnChange.original) {
+    return addCol(columnChange.current);
+  } else if (columnChange.original !== columnChange.current) {
+    return renameCol(columnChange.original, columnChange.current);
+  }
+};
+
 const changeExistingStudentsTable = (tableInfo: StudentsTable[], changes: readonly ColumnChange[], idx: number) => {
-  const isChange = (columnChange: any): boolean => ...
-
-  const mergeCol = (sourceCol: string, targetCol: string, needDeleteSourceCol: boolean) => (d: any) => ...;
-
-  const deleteCol = (deletedCol: string, isExist: boolean) => (d: any) => ...;
-
-  const addCol = (newCol: string) => (d: any) => ...;
-
-  const renameCol = (oldName: string, newName: string) => (d: any) => ...;
-
-  // This function returns, given a change, another function that will apply the change to the
-  // selected students table
-  const getChangeFunc = (columnChange: any): any => {
-    if (columnChange.mergedCol) {
-      return mergeCol(
-        columnChange.current,
-        columnChange.mergedCol,
-        Boolean(columnChange.original),
-      );
-    } else if (columnChange.deleted) {
-      return deleteCol(columnChange.original, Boolean(columnChange.original));
-    } else if (!columnChange.original) {
-      return addCol(columnChange.current);
-    } else if (columnChange.original !== columnChange.current) {
-      return renameCol(columnChange.original, columnChange.current);
-    }
-  };
-
   const modifyData = (cur: any, op: any) => op(cur);
 
   // This `pipe` takes the changes, filters the ones that are actually a change
@@ -237,26 +237,26 @@ The steps are:
 
 I feel the code is succinct and to the point, I'll leave it as it is for now.
 
-## Implementing the changes
+## Converting a change definition into an actual function
 
 To decide what the change should do the code has one function for each _kind_ of change:
 
 ```ts
-  const getChangeFunc = (columnChange: any): any => {
-    if (columnChange.mergedCol) {
-      return mergeCol(
-        columnChange.current,
-        columnChange.mergedCol,
-        Boolean(columnChange.original),
-      );
-    } else if (columnChange.deleted) {
-      return deleteCol(columnChange.original, Boolean(columnChange.original));
-    } else if (!columnChange.original) {
-      return addCol(columnChange.current);
-    } else if (columnChange.original !== columnChange.current) {
-      return renameCol(columnChange.original, columnChange.current);
-    }
-  };
+const getChangeFunc = (columnChange: any): any => {
+  if (columnChange.mergedCol) {
+    return mergeCol(
+      columnChange.current,
+      columnChange.mergedCol,
+      Boolean(columnChange.original),
+    );
+  } else if (columnChange.deleted) {
+    return deleteCol(columnChange.original, Boolean(columnChange.original));
+  } else if (!columnChange.original) {
+    return addCol(columnChange.current);
+  } else if (columnChange.original !== columnChange.current) {
+    return renameCol(columnChange.original, columnChange.current);
+  }
+};
 ```
 
 First of all we have a new type to represent the change. The type helps to capture some of the logic that was coded before
@@ -350,15 +350,55 @@ type UpdateFn = (tables: StudentTable[], idx: number) => StudentTable[];
 
 ```
 
-Each function will take a valid change, so it looks like:
+The function that decides how to apply the change will return a new `UpdateFn` in each
+case that will be applied later in the _reduce_.
+
 
 ```ts
 type ChangeMapFn<T extends ValidColumnChange> = (change: T) => UpdateFn;
 ```
 
-For example for removing an existing column:
+The signature for each function is very similar:
 
 
 ```ts
-const deleteCol: ChangeMapFn<RemoveColumn> = (change) => (table, idx) => {
+const deleteCol: ChangeMapFn<RemoveColumn> = (change) => (table, idx) => ...
+const renameCol: ChangeMapFn<RenameColumn> = (change) => (table, idx) => ...
+const addCol: ChangeMapFn<AddColumn> = (change) => (table, idx) => ...
+```
+
+Also all functions have in common that they modify the `columns` and the `values` for the `StudentTable`.
+
+We could create a function that can capture that common bit of work:
+
+```ts
+type ColumnNames = readonly ColumnName[];
+type Values = readonly Record<ColumnName, unknown>[];
+
+const updateTables =
+  (colFn: (columns: ColumnNames) => ColumnNames, valsFn: (vals: Values) => Values = (v) => v) =>
+  (tables: TableInfo[], idx: number) => {
+    const table = tables[idx];
+    table.columns = colFn(table.columns);
+    table.values = valsFn(table.values);
+    return tables;
+  };
+
+```
+
+### Deleting columns
+
+Using `updateTables` the `deleteCol` function now looks like:
+
+```ts
+import * as ROA from 'fp-ts/ReadonlyArray';
+import * as STR from 'fp-ts-std/Struct'; // fp-ts-std library
+
+const removeColumnValue = (target: ColumnName) => ROA.map(STR.omit([target]));
+
+const renameColumnValues = (oldName: string, newName: string) => ROA.map(STR.renameKey(oldName)(newName));
+
+const deleteCol: ChangeMapFn<RemoveColumn> = ({ target }) =>
+  updateTables(removeColumnName(target), removeColumnValue(target));
+
 ```
