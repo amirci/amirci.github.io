@@ -1,0 +1,116 @@
+--- 
+layout: post
+title: Snapping Strategy
+tags: 
+- Development
+- Patterns
+- SOLID
+status: publish
+type: post
+published: true
+meta: 
+  _edit_lock: "1271219456"
+  _edit_last: "1"
+---
+<h3>The application</h3>
+For the past eight months I’ve been working on a WPF  desktop application that has a tool to draw. Very similar to most drawing application, you select the Drawing tool in the ribbon/toolbox and then you are able to draw on the canvas until you close the shape or cancel the tool.
+<h3>The new requirement</h3>
+Now, we need to draw using snapping. Snapping means that when you are drawing close to a particular point (considering a distance) the mouse will move but the drawing line not, will stay snapped to the point.
+
+In this case we need to consider three cases:
+<ol>
+	<li>Snapping on the X axis (horizontal axis)</li>
+	<li>Snapping on the Y axis (vertical axis)</li>
+	<li>Snapping when the line has an 90 degree angle with the previous line</li>
+</ol>
+<h3>The solution</h3>
+<h4>Where should I add the snapping?</h4>
+So I started by writing a test  (Yes, full TDD) that checks when I’m close to the X axis (3 pixels or less) then the drawing tool should snap. My test failed gloriously and I was ready to start my implementation in order to make the test pass… now… the question is… who is responsible for snapping?
+<h4>The Drawing Tool</h4>
+Let’s review the drawing tool interaction to understand how it works using MVVM.
+<ul>
+	<li>The <em>Canvas </em>receives a mouse move event and passes that information to the <em>DrawingTool</em></li>
+	<li>The <em>DrawingTool</em> raises a <em>LineMoved</em> event</li>
+	<li>The view model receives the event and notifies the view</li>
+	<li>The view shows the line ending on the new point</li>
+</ul>
+A sequence diagram should look something like this:
+
+<a href="http://orthocoders.com/wp-content/uploads/2010/04/image.png"><img style="border-bottom: 0px; border-left: 0px; display: inline; border-top: 0px; border-right: 0px" title="image" src="http://orthocoders.com/wp-content/uploads/2010/04/image_thumb.png" border="0" alt="image" width="568" height="213" /></a>
+<h4>Who is responsible for snapping?</h4>
+The <em>DrawingTool</em> does not know about snapping, but it should, because is raising the event… However considering the SRP (single responsibility principle) makes more sense to delegate this decision to another class, behold the <em>ISnappingStrategy</em>.
+
+I decided to inject the strategy into the <em>DrawingTool</em> constructor (via IoC) and the <em>DrawingTool</em> will query the strategy for each point before raising the event, thus the event will contain the point decided by the strategy.
+
+Let’s look at the new sequence diagram with the strategy added to the interaction:
+<h4>Why a strategy? Is that the GOF pattern?</h4>
+Indeed it is, why? Because I wanted to encapsulate the algorithm I’m going to use to snap, snapping to X axis has different rules than snapping to the previous line when having a 90 degree angle. Please refer to the GOF book “Design Patterns” or Google for more examples and diagrams.
+<h4>Snapping Strategy Hierarchy</h4>
+I have so far one interface <em>ISnappingStrategy</em> and three concrete strategies that implement the interface:
+
+<span style="font-size: 13.3333px;"> </span>
+<ol><span style="font-size: 13.3333px;"><a href="http://orthocoders.com/wp-content/uploads/2010/04/image1.png"><img style="border-bottom: 0px; border-left: 0px; display: block; float: none; margin-left: auto; border-top: 0px; margin-right: auto; border-right: 0px" title="image" src="http://orthocoders.com/wp-content/uploads/2010/04/image_thumb1.png" border="0" alt="image" width="569" height="256" /></a></span></ol>
+Each strategy when called will return the snapped point or, if no snapping is required the same point.
+
+So far, so good…. now I have implemented them, and each one passes the unit tests. However I don’t want to use just one of the them, I want to use all of them combined. I’d like to use first <em>SnapToX</em> and if does not snap, then <em>SnapToY, etc, etc</em>.
+<h4>Enters the Composite Strategy</h4>
+The Composite pattern is another GOF pattern and the goal is to treat a group of objects like they where a single instance. In this case, I want to use multiple snapping strategies like they were just one strategy.
+
+Here is the idea, let’s create the Composite with a collection of strategies, and when called the Composite will iterate thru them until it finds a new snapping point or, if no snapping should happen, return the same point.
+
+So, with the Composite, the new hierarchy looks like:
+
+<a href="http://orthocoders.com/wp-content/uploads/2010/04/image2.png"><img style="border-bottom: 0px; border-left: 0px; display: inline; border-top: 0px; border-right: 0px" title="image" src="http://orthocoders.com/wp-content/uploads/2010/04/image_thumb2.png" border="0" alt="image" width="755" height="202" /></a>
+
+And the code for the composite snapping would be:
+<div id="codeSnippetWrapper">
+<div id="codeSnippet" style="text-align: left; line-height: 12pt; background-color: #f4f4f4; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;">
+<pre style="text-align: left; line-height: 12pt; background-color: white; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum1" style="color: #606060">   1:</span> <span style="color: #0000ff">public</span> Point Snap(Point point, IDrawingContext context)</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: #f4f4f4; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum2" style="color: #606060">   2:</span> {</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: white; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum3" style="color: #606060">   3:</span>     var found = <span style="color: #0000ff">this</span>._strategies.Find(s =&gt; s.Snap(point, context) != point);</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: #f4f4f4; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum4" style="color: #606060">   4:</span></pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: white; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum5" style="color: #606060">   5:</span>     <span style="color: #0000ff">return</span> found == <span style="color: #0000ff">null</span> ? point : found.Snap(point, context);</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: #f4f4f4; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum6" style="color: #606060">   6:</span> }</pre>
+<!--CRLF--></div>
+</div>
+<h3>The cherry on top</h3>
+Now we need to configure all this, luckily we can use Binsor to configure our Windsor container and it will look something like this:
+<div id="codeSnippetWrapper">
+<div id="codeSnippet" style="text-align: left; line-height: 12pt; background-color: #f4f4f4; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;">
+<pre style="text-align: left; line-height: 12pt; background-color: white; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum1" style="color: #606060">   1:</span> component <span style="color: #006080">"SnapToX"</span>, ISnappingStrategy, VectorSnappingStrategy:</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: #f4f4f4; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum2" style="color: #606060">   2:</span>   x = 1</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: white; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum3" style="color: #606060">   3:</span>   y = 0</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: #f4f4f4; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum4" style="color: #606060">   4:</span></pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: white; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum5" style="color: #606060">   5:</span> component <span style="color: #006080">"SnapToY"</span>, ISnappingStrategy, VectorSnappingStrategy:</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: #f4f4f4; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum6" style="color: #606060">   6:</span>   x = 0</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: white; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum7" style="color: #606060">   7:</span>   y = 1</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: #f4f4f4; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum8" style="color: #606060">   8:</span></pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: white; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum9" style="color: #606060">   9:</span> component <span style="color: #006080">"SnapToPrevious"</span>, ISnappingStrategy, PreviousLineSnappingStrategy</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: #f4f4f4; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum10" style="color: #606060">  10:</span></pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: white; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum11" style="color: #606060">  11:</span> component <span style="color: #006080">"SnappingStrategy"</span>, ISnappingStrategy, CompositeSnappingStrategy:</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: #f4f4f4; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum12" style="color: #606060">  12:</span>   strategies = [@SnapToX, @SnapToY, @SnapToPrevious]</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: white; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum13" style="color: #606060">  13:</span></pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: #f4f4f4; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum14" style="color: #606060">  14:</span> component <span style="color: #006080">"DrawTool"</span>, IDrawTool, DrawTool:</pre>
+<!--CRLF-->
+<pre style="text-align: left; line-height: 12pt; background-color: white; margin: 0em; width: 100%; font-family: 'Courier New', courier, monospace; direction: ltr; color: black; font-size: 8pt; overflow: visible; border-style: none; padding: 0px;"><span id="lnum15" style="color: #606060">  15:</span>   snapping = @SnappingStrategy</pre>
+<!--CRLF--></div>
+</div>
+Neat eh?
