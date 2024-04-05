@@ -232,18 +232,11 @@ a new version.
 
 The steps are:
 * Filter changes that are `none`.
-* For every change create a function that will apply it given a table.
-* Take the collections of functions to apply and fold them into the table creating a new one.
+* For every change create a function that will apply the change to a table.
+* Take the collections of functions to apply and fold them into the table creating an updated table.
 
 I feel the code is succinct and to the point, I'll leave it as it is for now.
 
-### Deciding how to apply each change
-
-```ts
-type UpdateFn = (tables: StudentTable[], idx: number) => StudentTable[];
-
-type ChangeMapFn = (change: ColumnChange) => UpdateFn;
-```
 ## Implementing the changes
 
 To decide what the change should do the code has one function for each _kind_ of change:
@@ -275,16 +268,24 @@ The new function signature will look something like this:
 const getChangeFunc = (change: ColumChange): ??? => ...
 ```
 
+We can add some types to represent the functions that will do the change:
+
+```ts
+type UpdateFn = (tables: StudentTable[], idx: number) => StudentTable[];
+
+type ChangeMapFn = (change: ColumnChange) => UpdateFn;
+```
+
 But we are going to call the function only for changes that are valid, so we can use the `ValidColumnChange` type instead.
 
 Every opportunity to narrow the domain of a type is a chance to improve the code for reading.
 
 Now the signature changed to:
 
-```ts
-const getChangeFunc = (change: ValidColumChange): ??? => ...
-```
 
+```ts
+const getChangeFunc = (change: ValidColumChange): UpdateFn => ...
+```
 
 We could take advantage that the `ColumnChange` type has a `type` discriminator field, and write something
 like this to obtain the function that will actually do the update:
@@ -339,3 +340,25 @@ const applyChangesToTable = (tableInfo: TableInfo[], changes: readonly ColumnCha
 
 ```
 
+## The update functions
+
+For each possible `ValidColumChange` the code in `changeToUpdateFn` returns an `UpdateFn`:
+
+
+```ts
+type UpdateFn = (tables: StudentTable[], idx: number) => StudentTable[];
+
+```
+
+Each function will take a valid change, so it looks like:
+
+```ts
+type ChangeMapFn<T extends ValidColumnChange> = (change: T) => UpdateFn;
+```
+
+For example for removing an existing column:
+
+
+```ts
+const deleteCol: ChangeMapFn<RemoveColumn> = (change) => (table, idx) => {
+```
