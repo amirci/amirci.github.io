@@ -10,11 +10,11 @@ categories: refactoring
 The refactoring story today is about a UI editor for a table of _Students_ that lets a user
 add, rename and remove columns.
 
-To do so it generates a series of changes than have to be applied and saved to the database.
+To do so it generates a series of changes that have to be applied and saved to the database.
 
 We will skip the _React_ portion of the code and we will focus on how to model the changes and the update process.
 
-NOTE: The code uses [fp-ts]() types and functions. You can see the functions or namespaces imported at the top.
+NOTE: The code uses [fp-ts](https://gcanti.github.io/fp-ts/) types and functions. You can see the functions or namespaces imported at the top.
 
 ```ts
 import { pipe } from 'fp-ts/function';
@@ -400,5 +400,129 @@ const renameColumnValues = (oldName: string, newName: string) => ROA.map(STR.ren
 
 const deleteCol: ChangeMapFn<RemoveColumn> = ({ target }) =>
   updateTables(removeColumnName(target), removeColumnValue(target));
+
+```
+
+### Adding and renaming columns
+
+Similarly we can use `updateTables` again for both:
+
+```ts
+const renameColumnValues = (oldName: string, newName: string) => ROA.map(STR.renameKey(oldName)(newName));
+
+const renameColumName = (oldName: ColumnName, newName: ColumnName) =>
+  flow(
+    ROA.filter<ColumnName>((e) => e !== oldName),
+    ROA.append(newName)
+  );
+
+const renameCol: ChangeMapFn<RenameColumn> = ({ newName, oldName }) =>
+  updateTables(renameColumName(oldName, newName), renameColumnValues(oldName, newName));
+
+const addCol: ChangeMapFn<AddColumn> = ({ target }) => updateTables(ROA.append(target));
+
+```
+
+And voila! Now the functions are very descriptive and much easier to read and understand.
+
+## Summary
+
+We [started](#the-refactoring-story-today-is-about-a-ui-editor-for-a-table-of) from lots of declarations with `any` and worked
+our way out to:
+
+* Use types to describe the concepts in the domain: This is a huge benefit when reading the code.
+* Use small functions with clear goals: Simpler to read and follow.
+* Avoid encoding logic into the changes: Each change now is separate and is only data.
+* Created helper functions to capture common functionality: Is similar to having a DSL (domain specific language)
+
+Here is all the code together:
+
+
+```ts
+type ColumnName = string;
+type ColumnNames = readonly ColumnName[];
+type Values = readonly Record<ColumnName, unknown>[];
+
+type StudentsTable = {
+  columns: ColumnNames;
+  values: Values;
+};
+
+// Possible changes
+type RemoveColumn = { type: 'remove'; target: ColumnName };
+type AddColumn = { type: 'add'; target: ColumnName };
+type RenameColumn = { type: 'rename'; newName: ColumnName; oldName: ColumnName };
+
+type ValidColumnChange = RemoveColumn | AddColumn | RenameColumn;
+
+// We should consider a change that does nothing
+type NoChange = { type: 'none' };
+type ColumnChange = ValidColumnChange | NoChange;
+
+// A function to update one of the tables by index
+type UpdateFn = (tables: StudentsTable[], idx: number) => StudentsTable[];
+
+// A function to convert a change into an updating function
+type ChangeMapFn<T extends ValidColumnChange> = (change: T) => UpdateFn;
+
+// Helper function to create an updating function for columns and values
+const updateTables =
+  (colFn: (columns: ColumnNames) => ColumnNames, valsFn: (vals: Values) => Values = (v) => v) =>
+  (tables: StudentsTable[], idx: number) => {
+    const table = tables[idx];
+    table.columns = colFn(table.columns);
+    table.values = valsFn(table.values);
+    return tables;
+  };
+
+// Helper function that removes a column name from the list of columns
+const removeColumnName = (target: ColumnName) => ROA.filter((e) => e !== target);
+
+// Helper function that removes a column value from the list of values
+const removeColumnValue = (target: ColumnName) => ROA.map(STR.omit([target]));
+
+// Helper function that renames the column in the list of values
+const renameColumnValues = (oldName: string, newName: string) => ROA.map(STR.renameKey(oldName)(newName));
+
+// Helper function that renames a column name
+const renameColumName = (oldName: ColumnName, newName: ColumnName) =>
+  flow(
+    ROA.filter<ColumnName>((e) => e !== oldName),
+    ROA.append(newName)
+  );
+
+// The actual function that will apply the RemoveColumn change
+const deleteCol: ChangeMapFn<RemoveColumn> = ({ target }) =>
+  updateTables(removeColumnName(target), removeColumnValue(target));
+
+// The actual function that will apply the RenameColumn change
+const renameCol: ChangeMapFn<RenameColumn> = ({ newName, oldName }) =>
+  updateTables(renameColumName(oldName, newName), renameColumnValues(oldName, newName));
+
+// The actual function that will apply the AddColumn change
+const addCol: ChangeMapFn<AddColumn> = ({ target }) => updateTables(ROA.append(target));
+
+// Converts a change into an updating function
+const changeToUpdateFn = (change: ValidColumnChange): UpdateFn =>
+  match(change)
+    .with({ type: 'add' }, addCol)
+    .with({ type: 'rename' }, renameCol)
+    .with({ type: 'remove' }, deleteCol)
+    .exhaustive();
+
+// Type predicate to check if a change is valid
+function isValidChange(change: ColumnChange): change is ValidColumnChange {
+  return change.type != 'none';
+}
+
+// The main function that applies the changes to the table
+export const applyChangesToTable = (tableInfo: StudentsTable[], changes: readonly ColumnChange[], idx: number) => {
+  return pipe(
+    changes,
+    ROA.filter(isValidChange),
+    ROA.map(changeToUpdateFn),
+    ROA.reduce(tableInfo, (table: StudentsTable[], fn: UpdateFn) => fn(table, idx))
+  );
+};
 
 ```
