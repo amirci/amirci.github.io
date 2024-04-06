@@ -180,13 +180,24 @@ Good first step, however the code relies on the _logic_ behind the combination o
 For example the column `current` and `deleted` may both be set to indicated that the column
 was added but deleted after.
 
-Instead of _encoding_ the business logic of the change in the combination I could use the types
-defined [above][#however-having-all-fields-optional-hints-that-some-combinations] to have clear data that represents each change.
+Instead of _encoding_ the business logic of the change in the combination of fields it would be better
+to make the logic explicit by using the types defined [above](#however-having-all-fields-optional-hints-that-some-combinations)
+and have clear data that represents each change.
 
-Because each _legacy_ change seems to perhaps be one or more actual changes, I could create
+Here is a summary of the meaning of the fields in a `LegacyColumnChange`:
+
+| Condition | Meaning | Implementation |
+|-----------|---------|----------------|
+| `mergedCol` and `original `exists | The change is a merge of columns | B merges into A -> Delete A and rename B to A |
+| `mergedCol` but no `original`| No change needed | - |
+| `deleted` and `original` exists | Delete the column | Delete B -> Column name should be removed from columns and from each value |
+| `original` does not exist but `current` exists | Add the column | Add B -> Column name added (no need to modify values) |
+
+Because each _legacy_ change could be one or more actual changes, I could create
 a function that given a _legacy_ change returns a `ColumnChange`.
 
 Something like:
+
 
 ```ts
 // Converts a legacy change to a well defined change
@@ -259,9 +270,9 @@ The steps are:
 
 I feel the code is succinct and to the point, I'll leave it as it is for now.
 
-## Converting a change definition into an actual function
+## Converting a change definition into a function that applies the change
 
-To decide what the change should do the code has one function for each _kind_ of change:
+Let's take a look on the function that _matches_ a column change to the business logic associated with it.
 
 ```ts
 const getChangeFunc = (columnChange: any): any => {
@@ -281,9 +292,14 @@ const getChangeFunc = (columnChange: any): any => {
 };
 ```
 
-I already created types to represent the change and a way to convert the legacy change into those types.
+The function is using [higher order functions](https://en.wikipedia.org/wiki/Higher-order_function).
 
-The new function signature will look something like this:
+Higher order functions is a cool technique that helps us encapsulate logic that can be called later.
+
+Each function matching a change will return in turn another function that captures how to apply the change.
+
+
+Using the types already defined I can replace `any` with `ColumnChange`:
 
 ```ts
 const getChangeFunc = (change: ColumChange): ??? => ...
@@ -294,39 +310,68 @@ Let's add some types to represent the functions that will do the actual change:
 ```ts
 type UpdateFn = (tables: StudentTable[], idx: number) => StudentTable[];
 
-type ChangeMapFn = (change: ColumnChange) => UpdateFn;
+type ChangeMapFn<T extends ColumnChange> = (change: T) => UpdateFn;
 ```
 
 But the function will be called only for changes that are valid, thus I can use the `ValidColumnChange` type instead.
 
 Every opportunity to narrow the domain of a type is a chance to improve the code for reading.
 
-Now the signature changed to:
-
-
 ```ts
-const getChangeFunc = (change: ValidColumChange): UpdateFn => ...
+type ChangeMapFn<T extends ValidColumnChange> = (change: T) => UpdateFn;
 ```
 
-I could take advantage that the `ColumnChange` type has a `type` discriminator field, and write 
+For example the `AddColumn` function:
+
+```ts
+// T in this case is `AddColumn`
+const addCol = ({ target: ColumnName }: AddColumn) => {
+  return (tables: readonly StudentTable[], idx: number) => {
+     // the logic goes here
+  }
+};
+```
+
+We could simplify a bit by using the `ChangeMapFn` type:
+
+```ts
+// The types are specified on the left
+const addCol: ChangeMapFn<AddColumn> = ({ target }) => (tables, idx) => ....
+
+```
+
+I could take advantage that the `ColumnChange` type has a `type` discriminator field, and write
 a `switch` to obtain the function that will actually do the update:
 
 
 ```ts
-  switch (change.type) {
-    case 'add':
-      return addCol(change);
-    case 'remove':
-      return deleteCol(change);
-    case 'rename':
-      return renameCol(change);
-  }
+switch (change.type) {
+  case 'add':
+    return addCol(change); // returns a function of type UpdateFn
+  case 'remove':
+    return deleteCol(change); // same here
+  case 'rename':
+    return renameCol(change); // same here
+}
 ```
 
 However, considering that `addCol`, `deleteCol`, etc, all return the same _kind_ of function perhaps there is
 a way to avoid a bit repeating the last `return` at the end of each branch.
 
-Luckily we can use [ts-pattern](https://github.com/gvergnaud/ts-pattern) for that:
+This looks quite like pattern matching on the type. And though TS does not support it (yet) there are libraries
+that can be used like [ts-pattern](https://github.com/gvergnaud/ts-pattern):
+
+```ts
+// Takes a valid column change ... and uses the `type` field to decide
+const changeToUpdateFn = (change: ValidColumnChange): UpdateFn =>
+  match(change)
+    .with({ type: 'add' }, (change: AddColumn) => addCol(change))
+    .with({ type: 'rename' }, ...)
+    .with({ type: 'remove' }, ...)
+    .exhaustive();
+```
+
+This is a case when using a _lambda_ to call a function is equivalent to use the function:
 
 ```ts
 const changeToUpdateFn = (change: ValidColumnChange): UpdateFn =>
@@ -338,7 +383,7 @@ const changeToUpdateFn = (change: ValidColumnChange): UpdateFn =>
 
 ```
 
-The last bit is to have a function that helps us filter the valid changes. We can use a TS 
+The last bit is to have a function that helps us filter the valid changes. We can use a TS
 [type guard](https://www.typescriptlang.org/docs/handbook/advanced-types.html) that helps with the conversion:
 
 ```ts
