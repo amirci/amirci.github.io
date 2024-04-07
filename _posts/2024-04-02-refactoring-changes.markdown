@@ -142,7 +142,9 @@ const table: StudentTable = {
 
 ```
 
-The changes seem to be a type with the following fields (I call it _legacy_ to mark the difference later with the refactored version):
+### Modeling changes to the columns
+
+The changes could be modeled as a type (I call it _legacy_ to mark the difference later with the refactored version):
 
 ```ts
 type LegacyColumnChange = {
@@ -153,12 +155,11 @@ type LegacyColumnChange = {
 };
 ```
 
-However, having all fields optional hints that some combinations are probably are invalid. We can try to represent the changes in
-a way that captures the intention behind each change and makes the states that cannot be valid not possible.
+Having all fields optional hints that some combinations probably are invalid. We can try to represent the changes in
+a way that captures the original intention behind the fields but makes the states that are invalid not possible.
 
 
 ```ts
-
 type ColumnName = string;
 type RemoveColumn = { type: 'remove'; target: ColumnName };
 type AddColumn = { type: 'add'; target: ColumnName };
@@ -172,144 +173,74 @@ type NoChange = { type: 'none' };
 
 // The actual type combines both
 type ColumnChange = ValidColumnChange | NoChange;
-
 ```
 
-Good first step, however the code relies on the _logic_ behind the combination of the fields.
+Good first step, however, the original code relies on the _logic_ behind the combination of the fields.
 
 For example the column `current` and `deleted` may both be set to indicated that the column
 was added but deleted after.
 
 Instead of _encoding_ the business logic of the change in the combination of fields it would be better
-to make the logic explicit by using the types defined [above](#however-having-all-fields-optional-hints-that-some-combinations)
+to make the logic explicit by using the types defined
+[above](#however-having-all-fields-optional-hints-that-some-combinations)
 and have clear data that represents each change.
 
-Here is a summary of the meaning of the fields in a `LegacyColumnChange`:
+Here is the explanation of what the fields represent in `LegacyColumnChange`
+(columns names A and B are just for example purposes):
 
-| Condition | Meaning | Implementation |
+| Fields | Change | Implementation |
 |-----------|---------|----------------|
-| `mergedCol` and `original `exists | The change is a merge of columns | B merges into A -> Delete A and rename B to A |
-| `mergedCol` but no `original`| No change needed | - |
-| `deleted` and `original` exists | Delete the column | Delete B -> Column name should be removed from columns and from each value |
-| `original` does not exist but `current` exists | Add the column | Add B -> Column name added (no need to modify values) |
+| `mergedCol` and `original `exists | Merge B into A| Delete A and rename B to A |
+| `mergedCol` exists but `original` not| No change needed | - |
+| `deleted` and `original` exists | Delete B | Column B should be removed from `columns` and from each object in `values` |
+| `original` does not exist but `current` exists | Add B | Column B added dot `columns` (no need to modify values) |
+| `original` and `current` do not exist | No change needed | - |
+| `original` different than `current` | Rename column A with B | Column A should be called B in `columns` |
+| any other case | No change needed | - |
 
-Because each _legacy_ change could be one or more actual changes, I could create
-a function that given a _legacy_ change returns a `ColumnChange`.
-
-Something like:
-
+Because when merging columns represent actually two operations, using a function 
+that given a _legacy_ change generates multiple `ColumnChange` captures all scenarios.
 
 ```ts
 // Converts a legacy change to a well defined change
 function legacyToChange(change: LegacyColumnChange): readonly ColumnChange[] {
   // skip this for now
+  // the logic will be the one mentioned in the table above.
 }
 ```
 
+## Converting a change into a function that applies it to the table
 
-### The body of the function
+Let's take a look at the signature of the functions that take a column change 
+and return another function that will actually apply the change to the `StudentTable`.
 
-Here is a simplified version of the code to highlight the structure of the body.
-I removed the body of the functions declared at the top and added some comments to clarify.
-
-I am also using the types I defined above and moved the function declarations outside.
 
 ```ts
-const isChange = (columnChange: any): boolean => ...
+const mergeCol = (sourceCol: string, ...) => (d: any) => ...;
 
-const mergeCol = (sourceCol: string, targetCol: string, needDeleteSourceCol: boolean) => (d: any) => ...;
-
-const deleteCol = (deletedCol: string, isExist: boolean) => (d: any) => ...;
+const deleteCol = (deletedCol: string, ...) => (d: any) => ...;
 
 const addCol = (newCol: string) => (d: any) => ...;
 
-const renameCol = (oldName: string, newName: string) => (d: any) => ...;
-
-// This function returns, given a change, another function that will apply the change to the
-// selected students table
-const getChangeFunc = (columnChange: any): any => {
-  if (columnChange.mergedCol) {
-    return mergeCol(
-      columnChange.current,
-      columnChange.mergedCol,
-      Boolean(columnChange.original),
-    );
-  } else if (columnChange.deleted) {
-    return deleteCol(columnChange.original, Boolean(columnChange.original));
-  } else if (!columnChange.original) {
-    return addCol(columnChange.current);
-  } else if (columnChange.original !== columnChange.current) {
-    return renameCol(columnChange.original, columnChange.current);
-  }
-};
-
-const changeExistingStudentsTable = (tableInfo: StudentsTable[], changes: readonly ColumnChange[], idx: number) => {
-  const modifyData = (cur: any, op: any) => op(cur);
-
-  // This `pipe` takes the changes, filters the ones that are actually a change
-  // creates a function and then applies it to the table.
-  return pipe(
-    columnChanges,
-    A.filter(isChange),
-    A.map(getChangeFunc),
-    A.reduce(tableInfo, modifyData),
-  );
-};
+const renameCol = (oldName: string, ...) => (d: any) => ...;
 ```
 
-I like the general idea. There is a collection of changes that need to be _applied_ to a `StudentTable` to
-obtain a new `StudentTable`.
-
-That idea pretty much looks like a `reduce` because the changes are _folded_ into a an existing _table_ to create
-a new version.
-
-The steps are:
-* Filter changes that are `none`.
-* For every change create a function that will apply the change to a table.
-* Take the collections of functions to apply and fold them into the table creating an updated table.
-
-I feel the code is succinct and to the point, I'll leave it as it is for now.
-
-## Converting a change definition into a function that applies the change
-
-Let's take a look on the function that _matches_ a column change to the business logic associated with it.
-
-```ts
-const getChangeFunc = (columnChange: any): any => {
-  if (columnChange.mergedCol) {
-    return mergeCol(
-      columnChange.current,
-      columnChange.mergedCol,
-      Boolean(columnChange.original),
-    );
-  } else if (columnChange.deleted) {
-    return deleteCol(columnChange.original, Boolean(columnChange.original));
-  } else if (!columnChange.original) {
-    return addCol(columnChange.current);
-  } else if (columnChange.original !== columnChange.current) {
-    return renameCol(columnChange.original, columnChange.current);
-  }
-};
-```
-
-The function is using [higher order functions](https://en.wikipedia.org/wiki/Higher-order_function).
+All the function are [higher order functions](https://en.wikipedia.org/wiki/Higher-order_function).
 
 Higher order functions is a cool technique that helps us encapsulate logic that can be called later.
 
 Each function matching a change will return in turn another function that captures how to apply the change.
 
-
-Using the types already defined I can replace `any` with `ColumnChange`:
-
-```ts
-const getChangeFunc = (change: ColumChange): ??? => ...
-```
-
-Let's add some types to represent the functions that will do the actual change:
+Similar to before, is better to have types for the arguments and the result:
 
 ```ts
+// Takes the tables and the index, does the change, and returns the tables updated
 type UpdateFn = (tables: StudentTable[], idx: number) => StudentTable[];
 
+// T can be any change
+// Given an `AddColumn` I need an `UpdateFn` that adds the column
+// Given a `RemoveColumn` I need an `UpdateFn` that removes the column
+// and so on ...
 type ChangeMapFn<T extends ColumnChange> = (change: T) => UpdateFn;
 ```
 
@@ -317,11 +248,12 @@ But the function will be called only for changes that are valid, thus I can use 
 
 Every opportunity to narrow the domain of a type is a chance to improve the code for reading.
 
+
 ```ts
 type ChangeMapFn<T extends ValidColumnChange> = (change: T) => UpdateFn;
 ```
 
-For example the `AddColumn` function:
+For example now the `AddColumn` function looks like:
 
 ```ts
 // T in this case is `AddColumn`
@@ -332,7 +264,7 @@ const addCol = ({ target: ColumnName }: AddColumn) => {
 };
 ```
 
-We could simplify a bit by using the `ChangeMapFn` type:
+I could simplify a bit by using the `ChangeMapFn` type:
 
 ```ts
 // The types are specified on the left
@@ -340,7 +272,36 @@ const addCol: ChangeMapFn<AddColumn> = ({ target }) => (tables, idx) => ....
 
 ```
 
-I could take advantage that the `ColumnChange` type has a `type` discriminator field, and write
+Before looking at each function I want to rework how the decision of what to call is made.
+
+## Deciding which function to call
+
+Here is the original code:
+
+```ts
+// Decides given a change which function will do the actual update
+const getChangeFunc = (columnChange: LegacyColumnChange): any => {
+  if (columnChange.mergedCol) {
+    return mergeCol(...),
+    );
+  } else if (columnChange.deleted) {
+    return deleteCol(...));
+  } else if (!columnChange.original) {
+    return addCol(...);
+  } else if (columnChange.original !== columnChange.current) {
+    return renameCol(...);
+  }
+};
+```
+
+Because I have a function that captures the logic of converting legacy into `ColumnChange` I'll change 
+the signature of the function (also rename it to `changeToUpdateFn`):
+
+```ts
+const changeToUpdateFn = (change: ValidColumChange): UpdateFn => ...
+```
+
+One option, is to take advantage that the `ColumnChange` type has a `type` discriminator field, and write
 a `switch` to obtain the function that will actually do the update:
 
 
@@ -356,7 +317,7 @@ switch (change.type) {
 ```
 
 However, considering that `addCol`, `deleteCol`, etc, all return the same _kind_ of function perhaps there is
-a way to avoid a bit repeating the last `return` at the end of each branch.
+a way to avoid repeating the last `return` at the end of each branch.
 
 This looks quite like pattern matching on the type. And though TS does not support it (yet) there are libraries
 that can be used like [ts-pattern](https://github.com/gvergnaud/ts-pattern):
@@ -371,7 +332,8 @@ const changeToUpdateFn = (change: ValidColumnChange): UpdateFn =>
     .exhaustive();
 ```
 
-This is a case when using a _lambda_ to call a function is equivalent to use the function:
+This is a case when using a _lambda_ to call a function is equivalent to use the function itself.
+Here is the code with the all the functions:
 
 ```ts
 const changeToUpdateFn = (change: ValidColumnChange): UpdateFn =>
@@ -383,51 +345,15 @@ const changeToUpdateFn = (change: ValidColumnChange): UpdateFn =>
 
 ```
 
-The last bit is to have a function that helps us filter the valid changes. We can use a TS
-[type guard](https://www.typescriptlang.org/docs/handbook/advanced-types.html) that helps with the conversion:
-
-```ts
-function isValidChange(change: ColumnChange): change is ValidColumnChange {
-  return change.type != 'none';
-}
-```
-
-Putting all together (and renaming the function to be a bit more descriptive) we get:
-
-```ts
-const applyChangesToTable = (tableInfo: TableInfo[], changes: readonly ColumnChange[], idx: number) => {
-  return pipe(
-    changes,
-    ROA.filter(isValidChange),
-    ROA.map(changeToUpdateFn),
-    ROA.reduce(tableInfo, (table: TableInfo[], updateFn: UpdateFn) => updateFn(table, idx))
-  );
-};
-
-```
-
 ## The update functions
 
-For each possible `ValidColumChange` the code in `changeToUpdateFn` returns an `UpdateFn`:
+The signature for all the functions is very similar (they all return an `UpdateFn`):
 
 
 ```ts
-type UpdateFn = (tables: StudentTable[], idx: number) => StudentTable[];
-
-```
-
-The function that decides how to apply the change will return a new `UpdateFn` in each
-case that will be applied later in the _reduce_.
-
-
-```ts
+// A function to convert a change into an updating function
 type ChangeMapFn<T extends ValidColumnChange> = (change: T) => UpdateFn;
-```
 
-The signature for each function is very similar:
-
-
-```ts
 const deleteCol: ChangeMapFn<RemoveColumn> = (change) => (table, idx) => ...
 const renameCol: ChangeMapFn<RenameColumn> = (change) => (table, idx) => ...
 const addCol: ChangeMapFn<AddColumn> = (change) => (table, idx) => ...
@@ -435,12 +361,15 @@ const addCol: ChangeMapFn<AddColumn> = (change) => (table, idx) => ...
 
 Also all functions have in common that they modify the `columns` and the `values` for the `StudentTable`.
 
-We could create a function that can capture that common bit of work:
+To capture that common functionality I could create a function that focuses on the updates:
 
 ```ts
 type ColumnNames = readonly ColumnName[];
 type Values = readonly Record<ColumnName, unknown>[];
 
+// The function takes two functions as arguments
+// One to update `ColumnNames`
+// One to update `Values` (optional, by defeault is the _identity_ function)
 const updateTables =
   (colFn: (columns: ColumnNames) => ColumnNames, valsFn: (vals: Values) => Values = (v) => v) =>
   (tables: TableInfo[], idx: number) => {
@@ -454,28 +383,51 @@ const updateTables =
 
 ### Deleting columns
 
-Using `updateTables` the `deleteCol` function now looks like:
+Let's see how it would look to use `updateTables` with `deleteCol`. 
+
+Two functions are needed, one to update the columns and one to update the values:
+
+#### Update columns
+
+To update the columns collection the function needs to take the columns and return a new collection 
+without the _target_ column name.
+
+I will use `filter` from the `ReadOnlyArray` module in [fp-ts](https://gcanti.github.io/fp-ts/modules/ReadonlyArray.ts.html#filter) to _remove_ the _target_ column returning a collection without it.
 
 ```ts
 import * as ROA from 'fp-ts/ReadonlyArray';
+const removeColumnName = (target: ColumnName) => ROA.filter<ColumnName>((e) => e !== target);
+```
+
+#### Update values
+
+To update the values collection the function needs to go over each value object and remove the field
+that is associated to the column _target_.
+
+I will use `map` to go over each value and `omit` to remove the field from the object:
+
+```ts
 import * as STR from 'fp-ts-std/Struct'; // fp-ts-std library
 
 const removeColumnValue = (target: ColumnName) => ROA.map(STR.omit([target]));
+```
 
-const renameColumnValues = (oldName: string, newName: string) => ROA.map(STR.renameKey(oldName)(newName));
+With both functions created, now I can change the declaration for `deleteCol` to:
+
+```ts
 
 const deleteCol: ChangeMapFn<RemoveColumn> = ({ target }) =>
   updateTables(removeColumnName(target), removeColumnValue(target));
-
 ```
 
 ### Adding and renaming columns
 
-Similarly we can use `updateTables` again for both:
+Similarly we can use `updateTables` for both `addCol` and `renameCol`:
 
 ```ts
 const renameColumnValues = (oldName: string, newName: string) => ROA.map(STR.renameKey(oldName)(newName));
 
+// flow composes functions from right to left
 const renameColumName = (oldName: ColumnName, newName: ColumnName) =>
   flow(
     ROA.filter<ColumnName>((e) => e !== oldName),
@@ -489,12 +441,96 @@ const addCol: ChangeMapFn<AddColumn> = ({ target }) => updateTables(ROA.append(t
 
 ```
 
-And voila! Now the functions are very descriptive and much easier to read and understand.
+And voila! Now the functions are more descriptive and much easier to read and understand.
+
+## Putting it all together
+
+The last bit is to combine all the functions created so far.
+
+Here is the original code, I moved the functions outside the scope of the function body for clarity:
+
+```ts
+const changeExistingStudentsTable = (tableInfo: StudentsTable[], changes: readonly ColumnChange[], idx: number) => {
+  const modifyData = (cur: any, op: any) => op(cur);
+
+  // This `pipe` takes the changes, filters the ones that are actually a change
+  // creates a function and then applies it to the table.
+  return pipe(
+    columnChanges,
+    A.map(legacyToChange), // I added this
+    A.filter(isChange),
+    A.map(getChangeFunc),
+    A.reduce(tableInfo, modifyData),
+  );
+};
+```
+
+I like the general idea of `changeExistingStudentsTable` (except the name, I'll change that later). There is a collection of changes that need to be _applied_ to a `StudentTable` to
+obtain a new `StudentTable`.
+
+That idea pretty much looks like a `reduce` because the changes are _folded_ into a an existing _table_ to create
+a new version.
+
+The steps are:
+* Convert legacy change into a `ColumnChange`.
+* Filter changes that are `none`.
+* For every change create a function that will apply the change to a table.
+* Take the collections of functions to apply and fold them into the table creating an updated table.
+
+I feel the code is succinct and to the point, I'll leave it as it is for now.
+
+### Filtering not valid changes
+
+To filter the valid changes I need a _predicate_ that returns _true_ when the type of the change
+is not `none`. Something like:
+
+```ts
+function isValidChange(change: ColumnChange): Boolean ....
+```
+
+However, using a plain predicate won't suffice:
+
+```ts
+pipe(
+  ...
+  ROA.filter(isValidChange), // returns a collection of ColumnChange
+  ROA.map(changeToUpdateFn), // changeToUpdateFn takes a ValidColumChange not a ColumnChange
+  ...
+)
+```
+
+To fix it, I would like to use a TS
+[type guard](https://www.typescriptlang.org/docs/handbook/advanced-types.html) to help returning the matching type:
+
+```ts
+function isValidChange(change: ColumnChange): change is ValidColumnChange {
+  return change.type != 'none';
+}
+```
+
+### The big enchilada
+
+Putting all together, renaming the function to be a bit more descriptive and using the previous
+refactored functions:
+
+
+```ts
+const applyChangesToTable = (tableInfo: TableInfo[], changes: readonly ColumnChange[], idx: number) => {
+  return pipe(
+    changes,
+    ROA.flatMap(legacyToChange), // One legacy to many changes, thus I need to _flatten_
+    ROA.filter(isValidChange),   // Thanks to the type predicate, all the changes ar ValidColumChange
+    ROA.map(changeToUpdateFn),   // Convert each change into a function to do the update
+    ROA.reduce(tableInfo, (table: TableInfo[], updateFn: UpdateFn) => updateFn(table, idx)) // apply each update
+  );
+};
+
+```
+
 
 ## Summary
 
-We [started](#the-refactoring-story-today-is-about-a-ui-editor-for-a-table-of) from lots of declarations with `any` and worked
-our way out to:
+We [started](#the-refactoring-story-today-is-about-a-ui-editor-for-a-table-of) from lots of declarations with `any` and worked our way out to:
 
 * Use types to describe the concepts in the domain: This is a huge benefit when reading the code.
 * Use small functions with clear goals: Simpler to read and follow.
@@ -582,10 +618,33 @@ function isValidChange(change: ColumnChange): change is ValidColumnChange {
   return change.type != 'none';
 }
 
+// constructors for change types
+const createDeleteColumn = (target: ColumnName): RemoveColumn => ({ type: 'remove', target });
+
+const createAddColumn = (target: ColumnName): AddColumn => ({ type: 'add', target });
+
+const createRenameColumn = (newName: ColumnName, oldName: ColumnName): RenameColumn => ({ type: 'rename', newName, oldName });
+
+const noChange = { type: 'none' };
+
 // Converts a legacy change to a well defined change
 function legacyToChange(change: LegacyColumnChange): readonly ColumnChange[] {
-  // pending
-  return [];
+  const noChanges = [noChange];
+  
+  if (mergedCol) {
+    return original ? [createDeleteColumn(mergedCol), createRenameColumn(mergedCol, current!)] : noChanges;
+  }
+  if (deleted) {
+    return original ? [createDeleteColumn(original)] : noChanges;
+  }
+  if (!original) {
+    return current ? [createAddColumn(current)] : noChanges;
+  }
+  if (original != current) {
+    return [createRenameColumn(original!, current!)];
+  }
+
+  return noChanges;
 }
 
 // The main function that applies the changes to the table
