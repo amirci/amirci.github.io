@@ -538,6 +538,7 @@ The code is definitely larger than the original. The amount of lines is more tha
 We [started](#the-refactoring-story-today-is-about-a-ui-editor-for-a-table-of) from lots of declarations with `any` and worked our way out to:
 
 * Use types to describe the concepts in the domain: This is a huge benefit when reading the code.
+* Make invalid combinations impossible: The type predicate will return only valid changes.
 * Use small functions with clear goals: Simpler to read and follow.
 * Avoid encoding logic into the changes: Each change now is separate and is only data.
 * Created helper functions to capture common functionality: Is similar to having a DSL (domain specific language)
@@ -668,7 +669,7 @@ export const applyChangesToTable = (tables: StudentsTable[], changes: readonly C
 
 ### Afterthoughts
 
-Another good practice after refactoring is to review the code looking for parts
+A good practice after refactoring is to review the code looking for parts
 that could be written better. I have a couple of thoughts.
 
 #### Why use a collection of `StudentTable` and a index?
