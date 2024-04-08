@@ -530,6 +530,10 @@ const applyChangesToTable = (tableInfo: TableInfo[], changes: readonly ColumnCha
 
 ## Summary
 
+No good refactoring should happen without answering the question "Is this better than before?".
+
+The code is definitely larger than the original. The amount of lines is more than double.
+
 We [started](#the-refactoring-story-today-is-about-a-ui-editor-for-a-table-of) from lots of declarations with `any` and worked our way out to:
 
 * Use types to describe the concepts in the domain: This is a huge benefit when reading the code.
@@ -537,8 +541,9 @@ We [started](#the-refactoring-story-today-is-about-a-ui-editor-for-a-table-of) f
 * Avoid encoding logic into the changes: Each change now is separate and is only data.
 * Created helper functions to capture common functionality: Is similar to having a DSL (domain specific language)
 
-Here is all the code together:
+For all these reasons I think the code is better than before and the refactoring is worth it.
 
+Here is all the code together:
 
 ```ts
 type Student = Record<string, unknown>;
@@ -630,15 +635,15 @@ const noChange = { type: 'none' };
 // Converts a legacy change to a well defined change
 function legacyToChange(change: LegacyColumnChange): readonly ColumnChange[] {
   const noChanges = [noChange];
-  
-  if (mergedCol) {
-    return original ? [createDeleteColumn(mergedCol), createRenameColumn(mergedCol, current!)] : noChanges;
+  if (mergedCol && original) {
+    return [createDeleteColumn(mergedCol), createRenameColumn(mergedCol, current!)];
   }
-  if (deleted) {
-    return original ? [createDeleteColumn(original)] : noChanges;
+
+  if (deleted && original) {
+    return [createDeleteColumn(original)];
   }
-  if (!original) {
-    return current ? [createAddColumn(current)] : noChanges;
+  if (!original && current) {
+    return [createAddColumn(current)];
   }
   if (original != current) {
     return [createRenameColumn(original!, current!)];
@@ -648,14 +653,73 @@ function legacyToChange(change: LegacyColumnChange): readonly ColumnChange[] {
 }
 
 // The main function that applies the changes to the table
-export const applyChangesToTable = (tableInfo: StudentsTable[], changes: readonly ColumnChange[], idx: number) => {
+export const applyChangesToTable = (tables: StudentsTable[], changes: readonly ColumnChange[], idx: number) => {
   return pipe(
     changes,
     ROA.flatMap(legacyToChange),
     ROA.filter(isValidChange),
     ROA.map(changeToUpdateFn),
-    ROA.reduce(tableInfo, (table: StudentsTable[], fn: UpdateFn) => fn(table, idx))
+    ROA.reduce(tables, (table: StudentsTable[], fn: UpdateFn) => fn(table, idx))
   );
 };
 
 ```
+
+### Afterthoughts
+
+Another good practice after refactoring is to review the code looking for parts
+that could be written better. I have a couple of thoughts.
+
+#### Why use a collection of `StudentTable` and a index?
+
+It seems that the code works with one table at a time, perhaps instead of working with
+a collection only one `StudentTable` could be used and the main function could return the table updated.
+
+
+```ts
+type UpdateFn = (table: StudentTable) => StudentTable;
+
+export const applyChangesToTable = (table: StudentsTable, changes: readonly ColumnChange[]) => {
+  return pipe(
+    changes,
+    ...
+    ROA.reduce(table, (table: StudentsTable[], fn: UpdateFn) => fn(table))
+  );
+};
+
+```
+
+#### Filtering changes may not be necessary
+
+When converting `LegacyColumnChange` into a collection of `ColumnChange` instead of returning
+`NoChange` the function could return an empty collection instead. Because all the results will
+be concatenated at the end an empty collection will not affect the result.
+
+```ts
+function legacyToChange(change: LegacyColumnChange): readonly ValidColumnChange[] {
+   // the logic here dos not change
+
+  return [];
+}
+
+// That means that there's no need to filter
+
+
+export const applyChangesToTable = (tables: StudentsTable[], changes: readonly ColumnChange[], idx: number) => {
+  return pipe(
+    changes,
+    ROA.flatMap(legacyToChange), // no need to filter after
+    ROA.map(changeToUpdateFn),
+    ...
+  );
+};
+```
+
+## Resources
+
+If you wish to play with the code I have created a public [repl.it](https://replit.com/@amirci/2024-04-02-Refactor-using-reduce?v=1) that can be forked.
+
+Do you have questions or comments? Feel free to drop me a line.
+
+Enjoy!
+
