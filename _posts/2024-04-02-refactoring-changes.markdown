@@ -648,7 +648,7 @@ function legacyToChange(change: LegacyColumnChange): readonly ColumnChange[] {
     return [createAddColumn(current)];
   }
   if (original != current) {
-    return [createRenameColumn(original!, current!)];
+    return [createRenameColumn(current!, original!)];
   }
 
   return noChanges;
