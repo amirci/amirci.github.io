@@ -372,7 +372,7 @@ type Values = readonly Record<ColumnName, unknown>[];
 // One to update `Values` (optional, by defeault is the _identity_ function)
 const updateTables =
   (colFn: (columns: ColumnNames) => ColumnNames, valsFn: (vals: Values) => Values = (v) => v) =>
-  (tables: TableInfo[], idx: number) => {
+  (tables: StudentTable[], idx: number) => {
     const table = tables[idx];
     table.columns = colFn(table.columns);
     table.values = valsFn(table.values);
@@ -387,7 +387,7 @@ Let's see how it would look to use `updateTables` with `deleteCol`.
 
 Two functions are needed, one to update the columns and one to update the values:
 
-#### Update columns
+#### A function that updates the columns
 
 To update the columns collection the function needs to take the columns and return a new collection 
 without the _target_ column name.
@@ -399,10 +399,10 @@ import * as ROA from 'fp-ts/ReadonlyArray';
 const removeColumnName = (target: ColumnName) => ROA.filter<ColumnName>((e) => e !== target);
 ```
 
-#### Update values
+#### A function that updates the values
 
 To update the values collection the function needs to go over each value object and remove the field
-that is associated to the column _target_.
+that is associated to the _target_ column.
 
 I will use `map` to go over each value and `omit` to remove the field from the object:
 
@@ -415,7 +415,6 @@ const removeColumnValue = (target: ColumnName) => ROA.map(STR.omit([target]));
 With both functions created, now I can change the declaration for `deleteCol` to:
 
 ```ts
-
 const deleteCol: ChangeMapFn<RemoveColumn> = ({ target }) =>
   updateTables(removeColumnName(target), removeColumnValue(target));
 ```
@@ -428,6 +427,8 @@ Similarly we can use `updateTables` for both `addCol` and `renameCol`:
 const renameColumnValues = (oldName: string, newName: string) => ROA.map(STR.renameKey(oldName)(newName));
 
 // flow composes functions from right to left
+// returning a function/lambda that takes a collection and returns
+// a collection is the same as composing filter + append
 const renameColumName = (oldName: ColumnName, newName: ColumnName) =>
   flow(
     ROA.filter<ColumnName>((e) => e !== oldName),
@@ -515,13 +516,13 @@ refactored functions:
 
 
 ```ts
-const applyChangesToTable = (tableInfo: TableInfo[], changes: readonly ColumnChange[], idx: number) => {
+const applyChangesToTable = (tables: StudentTable[], changes: readonly ColumnChange[], idx: number) => {
   return pipe(
     changes,
     ROA.flatMap(legacyToChange), // One legacy to many changes, thus I need to _flatten_
     ROA.filter(isValidChange),   // Thanks to the type predicate, all the changes ar ValidColumChange
     ROA.map(changeToUpdateFn),   // Convert each change into a function to do the update
-    ROA.reduce(tableInfo, (table: TableInfo[], updateFn: UpdateFn) => updateFn(table, idx)) // apply each update
+    ROA.reduce(tables, (acc: StudentTable[], updateFn: UpdateFn) => updateFn(table, idx)) // apply each update
   );
 };
 
