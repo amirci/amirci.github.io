@@ -24,7 +24,7 @@ author:
   email: "amir@barylko.com"
 email: amir@barylko.com
 description: >- # this means to ignore newlines until "baseurl:"
-  This is my blog, thoughts and musings
+  This is my blog, thoughts, and musings
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: amirbarylko
