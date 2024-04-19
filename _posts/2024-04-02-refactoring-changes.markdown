@@ -16,6 +16,10 @@ I will skip the _React_ portion of the code and focus on how to model the change
 
 NOTE: The code uses [fp-ts](https://gcanti.github.io/fp-ts/) types and functions. You can see the functions and namespaces imported at the top.
 
+If you wish to play with the code I have created a public [repl.it](https://replit.com/@amirci/2024-04-02-Refactor-using-reduce?v=1) that can be forked.
+
+Let's take a look at the code:
+
 ```ts
 import { pipe } from 'fp-ts/function';
 import * as A from 'fp-ts/Array';
