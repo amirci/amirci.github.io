@@ -67,7 +67,7 @@ def test_increment_when_n_is_not_a_number():
         increment(None)
 ```
 
-Exceptions is a mechanism that `Python` (and many other languages) use to represent that an _exceptional_ error has happened. In order to "handle" the error we need to use a `try` and `catch` block. If not caught the exception will go up the stack of calls until it reaches the top, where there is a default _handler_ waiting.
+Exceptions is a mechanism that `Python` (and many other languages) use to represent that an _exceptional_ error has happened. In order to "handle" the error we need to use a `try` and `exception` block. If not caught the exception will go up the stack of calls until it reaches the top, where there is a default _handler_ waiting.
 
 But are we truly going to handle a `TypeError`? To do what with it? Probably nothing... we should let the exception bubble up and blow up at the top.
 
@@ -84,7 +84,7 @@ def test_increment_when_unrelated_happens():
 Again, probably nothing... bubble up it is.
 
 
-For _pure functions_ there is no need to check for errors because the result will be always be related to the input arguments. Wait, what if I need to do validation or parse a string and it could fail? We will discuss modeling failure in a bit. Lets first take a look what happens when functions are not _pure_.
+For _pure functions_ there is no need to check for errors because the result will be always be related to the input arguments. Wait, what if I need to do validation or parse a string and it could fail? We will discuss modeling failures in the next sections. Let us first take a look what happens when functions are not _pure_.
 
 ### Side effects
 
@@ -482,13 +482,35 @@ def api_handler(request_info) -> ApiHttpResponse:
     # do the same for each call
 ```
 
-But we are missing 
+But we are missing on of the cool features of `Either`, using `.then` to chain multiple calls:
 
+```python
+def api_handler(request_info) -> ApiHttpResponse:
 
+    return validate_request(request_info)
+      # When the result is `Right` calls the next function, if left skips the call
+      .then(call_internal_api)
+      # When the result is `Right` calls the next function, if left skips the call
+      .then(store_to_database)
+      # Call `to_success_response` if is `Right` otherwise call `to_failure_response`
+      .either(to_success_response, to_failure_response)
 
+```
 
 
 ## What should I do then?
 
+Whether through using exceptions, status codes, or more sophisticated types like `Either`, the goal is to ensure that errors are handled in a way that is predictable, maintainable, and aligned with the overall design of the software.
 
+Each error-handling approach has its own context where it shines:
+
+* Exceptions are best suited for scenarios where you need to handle unexpected, exceptional situations that require immediate attention or need to bubble up through multiple layers of the stack. They're powerful for skipping irrelevant intermediate steps when something goes wrong, but they can also lead to less predictable code if overused.
+
+* Status Codes are ideal when dealing with external systems like APIs, where standardized responses (like HTTP status codes) can be returned to indicate success or failure. This approach is straightforward and works well when the caller can easily understand and act on these codes.
+
+* Returning Special Values (like None or a custom error value) is useful when you want to keep your function calls simple and direct, especially in situations where failure is a common, non-exceptional part of the process. This method keeps your code clean but may sometimes lack the explicitness needed for more complex error-handling.
+
+* Using Types Like Maybe or Either is a great choice when you want to enforce handling of possible failures directly in your code’s logic. These types make it clear that a function can either succeed or fail, and they compel the caller to deal with both scenarios. This approach is particularly powerful in functional programming or when building systems where predictable and explicit error handling is crucial.
+
+Incorporating these practices into your codebase not only improves the robustness of your applications but also fosters a more reliable and understandable system for those who come after you. By thoughtfully modeling failures, you create a safety net that allows your code to fail gracefully, making it easier to debug, test, and ultimately, trust. As we continue to build more complex systems, the principles discussed here serve as a foundation for writing resilient and clear code that stands the test of time.
 
