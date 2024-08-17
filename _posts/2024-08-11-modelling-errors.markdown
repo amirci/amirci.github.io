@@ -320,13 +320,14 @@ What if function `B` also calls function `C`? How can I differentiate which one 
       function_c raises `ValidationError`
 ```
 
-The function `A` has a contract with function `B`... but why should know about function `C`?
+The function `A` has a contract with function `B`... but why should `A` know about function `C` failures? That breaks the _abstraction_ contract between functions and couples `A` to `C`.
 
 ### Status code vs exceptions
 
-Lets explore a function that calls the API. Using HTTP to call an API is quite common and part of the contract usually is to
-get a _status code_ that identifies what kind of response was obtained. The `200` range means we got a valid response,
-`300` means redirect, `400` means the parameters have some kind of issue and the infamous `404` means not found.
+Let's explore a function that calls an API using HTTP. This example is a very common scenario. The contract when calling
+includes a result data structure with a _status code_ field that identifies what kind of response was obtained.
+The `200` range means a valid response,
+`301` means redirect, `400` means the parameters have some kind of issue and the infamous `404` means not found and so on.
 
 
 ```python
@@ -339,7 +340,7 @@ def calling_an_api(request):
 ```
 
 Having a response with a `status_code` field is OK but depending of the status code some other fields in the response
-may be important and useful. We can use exceptions to model the different kind of errors and the information
+may be important and useful. This is a hint that using multiple types to represent the response could be a good idea. We can use exceptions to model the different kind of errors and the information
 associated with each of them.
 
 ```python
@@ -488,9 +489,9 @@ But we are missing on of the cool features of `Either`, using `.then` to chain m
 def api_handler(request_info) -> ApiHttpResponse:
 
     return validate_request(request_info)
-      # When the result is `Right` calls the next function, if left skips the call
+      # When the result is `Right` calls the next function, if `Left` skips the call
       .then(call_internal_api)
-      # When the result is `Right` calls the next function, if left skips the call
+      # When the result is `Right` calls the next function, if `Left` skips the call
       .then(store_to_database)
       # Call `to_success_response` if is `Right` otherwise call `to_failure_response`
       .either(to_success_response, to_failure_response)
@@ -500,17 +501,15 @@ def api_handler(request_info) -> ApiHttpResponse:
 
 ## What should I do then?
 
-Whether through using exceptions, status codes, or more sophisticated types like `Either`, the goal is to ensure that errors are handled in a way that is predictable, maintainable, and aligned with the overall design of the software.
+Whether through using exceptions, status codes, or more sophisticated types like `Either`, the goal is to ensure that errors are conveyed clearly so they can be handled in a way that is predictable and easy to implement and maintain.
 
-Each error-handling approach has its own context where it shines:
+Each error modeling approach has its own context where it shines:
 
-* Exceptions are best suited for scenarios where you need to handle unexpected, exceptional situations that require immediate attention or need to bubble up through multiple layers of the stack. They're powerful for skipping irrelevant intermediate steps when something goes wrong, but they can also lead to less predictable code if overused.
+* Exceptions are best suited for scenarios where you need to handle unexpected, exceptional situations that are meant to bubble up through multiple layers of the stack. Using an exception to communicate a possible error is more "expensive" and if not caught breaks the contract between functions. The caller may find exceptions that are born nested in multiple levels of function calls, without the ability of act on them.
 
-* Status Codes are ideal when dealing with external systems like APIs, where standardized responses (like HTTP status codes) can be returned to indicate success or failure. This approach is straightforward and works well when the caller can easily understand and act on these codes.
+* Returning special values (like None or a custom error value) is useful when you want to keep your function calls simple and direct, especially in situations where failure can take only one shape and there is no need to convey more than that. This method is simpler to implement and easy to understand clean but as the code grows it will become insufficient to model all kinds of failures and the code will become harder to read and maintain.
 
-* Returning Special Values (like None or a custom error value) is useful when you want to keep your function calls simple and direct, especially in situations where failure is a common, non-exceptional part of the process. This method keeps your code clean but may sometimes lack the explicitness needed for more complex error-handling.
-
-* Using Types Like Maybe or Either is a great choice when you want to enforce handling of possible failures directly in your code’s logic. These types make it clear that a function can either succeed or fail, and they compel the caller to deal with both scenarios. This approach is particularly powerful in functional programming or when building systems where predictable and explicit error handling is crucial.
+* Using types like `Maybe` or `Either` is a great choice when you want to enforce handling of possible failures directly in your code’s logic. These types make it clear that a function can either succeed or fail, and they compel the caller to deal with both scenarios. This approach makes your code resilient, predictable, testable and easy to maintain.
 
 Incorporating these practices into your codebase not only improves the robustness of your applications but also fosters a more reliable and understandable system for those who come after you. By thoughtfully modeling failures, you create a safety net that allows your code to fail gracefully, making it easier to debug, test, and ultimately, trust. As we continue to build more complex systems, the principles discussed here serve as a foundation for writing resilient and clear code that stands the test of time.
 
