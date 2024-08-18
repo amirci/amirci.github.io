@@ -222,8 +222,8 @@ def important_function():
 
 ```
 
-That's better, pretty standard too. But `None` also represents when functions do _nothing_ and have _side effects_.
-Lets take the idea a bit further into representing the absence of value with a type.
+That's better, pretty standard too. But `None` also represents when functions do not return a value and have _side effects_.
+Let's take the idea a bit further into representing the absence of value with a type.
 Instead of using `None` lets create a data type
 that can help represent and convey that the result maybe has a value or maybe not. Using a different type will force
 the caller to deal with the result and make sure it works as intended. A well known name for this type is `Maybe`.
