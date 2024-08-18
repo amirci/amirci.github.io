@@ -197,9 +197,7 @@ def important_function():
 
 Pretty standard so far. Perhaps there is an alternative that helps to make the code a bit more succinct, more expression like.
 
-Instead of using an `Exception` we could change the contract of `parse_int` and return a value that represents that parsing
-
-could not be done:
+Instead of using an `Exception` we could change the contract of `parse_int` and return a value that represents that parsing could not be done:
 
 
 ```python
@@ -252,7 +250,7 @@ def important_function():
 Not bad! Now it is very clear that `parse_int` could fail (not an exceptional case though) and the caller has
 to handle the result to make sure it works with the rest of the code.
 
-This is fine and dandy for cases with clear semantics in terms of having a result or not at all. But that 
+This is fine and dandy for cases with clear semantics in terms of having a result or not at all. But that
 will not work in cases where failures can come in many different flavors.
 
 
@@ -261,7 +259,7 @@ will not work in cases where failures can come in many different flavors.
 There is no doubt that not handling exceptions is by far the easiest approach. However, you could argue that
 documenting what kind of failures are possible in a postcondition is part of our responsibility as developers.
 
-Exceptions are great when we need to skip many calls and bubble up the stack, but they are not mean as a mechanism
+Exceptions are great when we need to skip many calls and bubble up the stack, but they are not meant as a mechanism
 to communicate failure.
 
 > Languages like Java classify exceptions into checked and not checked exceptions. Checked exceptions have to be
@@ -321,6 +319,10 @@ What if function `B` also calls function `C`? How can I differentiate which one 
 ```
 
 The function `A` has a contract with function `B`... but why should `A` know about function `C` failures? That breaks the _abstraction_ contract between functions and couples `A` to `C`.
+
+> A function creates a contract with a caller by specifying the precondition and postcondition. Inputs and outputs.
+> The function _abstracts_ the caller from the implementation details. If the caller needs to know how the _callee_ 
+is implemented, then the abstraction is broken and probably the contract is broken as well.
 
 ### Status code vs exceptions
 
@@ -382,7 +384,7 @@ The `Either` type has two possible values, a `Right` value as in the _right_ thi
 
 > Many languages already have this concept as part of the core language. `Go` returns a _tuple_ where the second
 component is the error. `Rust` has a `Result` type to represent possible failures. `Swift` also
-have a `Result` type.
+has a `Result` type.
 
 The result of a function that calls an API could be modeled with the `Either` type to contain both scenarios:
 
@@ -407,10 +409,10 @@ Modeling errors with the `Either` type has an extra benefit baked in that can si
 As much as we may like having function definitions with complete transparency in terms of failures
 the crux of modeling errors is to deal with them as callers.
 
-Similar to modeling errors with exceptions (let's ignore for a second the extra cost of exceptions etc) adding
+Similar to modeling errors with exceptions (let's ignore for a second the extra cost of using exceptions) adding
 code to handle every possible error becomes tedious and adds the feeling of fighting _fire_ with _fire_.
 
-To illustrate this point, let's use a function that validates parameters, call an API and then makes a database operation.
+To illustrate this point, let's use a function that validates parameters, calls an API and then makes a database operation.
 
 ```python
 def api_handler(request_info) -> ApiHttpResponse:
@@ -439,7 +441,7 @@ def api_handler(request_info) -> ApiHttpResponse:
 ```
 
 In his [blog](https://fsharpforfunandprofit.com/rop/) Scott talks about "Railway Oriented Programming". That is a
-technique that helps identifying _failures_ early in flow and bail out gracefully.
+technique that helps identifying _failures_ early in the flow and skip other calls gracefully.
 
 We could use a similar idea. Instead of using `Exception` to communicate the possible failures, each function will
 return an `Either`:
