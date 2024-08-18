@@ -115,7 +115,7 @@ except Exception as e:
   # maybe we don't care?
 ```
 
-In the section about _pure_ functions we hinted that when exceptions are _truly exceptional_ there is no point in handling them. They convey a _terminal_ event has happened, and probably if there is something we could do about it should be a decision that should be done at the top level.
+In the section about _pure_ functions we hinted that when exceptions are _truly exceptional_ there is no point in handling them. They convey a terminal event has happened and a decision at the top level should be made in order to handle it.
 
 But which exceptions are truly _exceptional_ and which are a _possible valid_ scenario that are worth being considered part of the contract (postcondition) for a function?
 
@@ -290,7 +290,7 @@ def function_a():
 
 ```
 
-An alternative would be to split the exception block:
+The `except` block can not tell which function is the culprit. An alternative would be to split the exception block:
 
 
 ```python
