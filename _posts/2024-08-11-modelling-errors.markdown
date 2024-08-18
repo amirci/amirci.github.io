@@ -276,7 +276,7 @@ declaration in the signature of the function.
 What would happen if function `A` calls function `B` that can raise `ValidationError`, and also calls a function `C`
 that also raises `ValidationError`. In this case both functions use the same library (not that far fetched).
 
-The caller could try to catch the exception:
+The caller could try to catch the exception by doing something like:
 
 ```python
 def function_a():
@@ -381,7 +381,7 @@ The `Either` type has two possible values, a `Right` value as in the _right_ thi
 (commonly used to hold the value for failure or error).
 
 > Many languages already have this concept as part of the core language. `Go` returns a _tuple_ where the second
-component is the error. `Rust` has a `Result` type to represent possible failures. `Kotlin` and `Swift` also
+component is the error. `Rust` has a `Result` type to represent possible failures. `Swift` also
 have a `Result` type.
 
 The result of a function that calls an API could be modeled with the `Either` type to contain both scenarios:
