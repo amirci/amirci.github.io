@@ -102,7 +102,7 @@ For example, we could have multiple function calls, function `A` calls function 
 
 Also, what if we want to retry? Maybe a `NetworkError` could be fixed by retrying when calling an API.
 
-I think that we need to care a little bit possible exceptions. That means our code now may look something like:
+We need to care a tad more about the possible exceptions. That means our code now may look something like:
 
 ```python
 try:
@@ -140,7 +140,7 @@ This is a very well known case that most will be familiar with. Probably the cod
 ```python
 def important_function(arg1, arg2, ...argN)
   """
-  A very important functino that uses `divides`
+  A very important function that uses `divides`
   """
   # ... important stuff here
 
@@ -357,7 +357,7 @@ class UnknownError(HttpException):
   pass
 
 
-class Timeout(?????): # Not sure what's the based
+class Timeout(?????): # Not sure what the base class should be
   """ Represents timeout calling, not sure what's the base class """
   pass
 
@@ -507,7 +507,7 @@ Each error modeling approach has its own context where it shines:
 
 * Exceptions are best suited for scenarios where you need to handle unexpected, exceptional situations that are meant to bubble up through multiple layers of the stack. Using an exception to communicate a possible error is more "expensive" and if not caught breaks the contract between functions. The caller may find exceptions that are born nested in multiple levels of function calls, without the ability of act on them.
 
-* Returning special values (like None or a custom error value) is useful when you want to keep your function calls simple and direct, especially in situations where failure can take only one shape and there is no need to convey more than that. This method is simpler to implement and easy to understand clean but as the code grows it will become insufficient to model all kinds of failures and the code will become harder to read and maintain.
+* Returning special values (like None or a custom error value) is useful when you want to keep your function calls simple and direct, especially in situations where failure can take only one shape and there is no need to convey more than that. This method is simpler to implement and easier to understand but as the code grows it will become insufficient to model all kinds of failures and the code will become harder to read and maintain.
 
 * Using types like `Maybe` or `Either` is a great choice when you want to enforce handling of possible failures directly in your code’s logic. These types make it clear that a function can either succeed or fail, and they compel the caller to deal with both scenarios. This approach makes your code resilient, predictable, testable and easy to maintain.
 
