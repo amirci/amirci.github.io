@@ -3,6 +3,14 @@
     .wrapper {
         min-width: 1200px;
     }
+    .container, .container-lg, .container-md, .container-sm, .container-xl {
+        max-width: 1400px;
+    }
+}
+
+.mermaid {
+    border: 1px solid;
+    padding: 20px 5px;
 }
 
 .box-it {
