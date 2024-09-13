@@ -325,8 +325,9 @@ What if function `B` also calls function `C`? How can I differentiate which one 
 
 The function `A` has a contract with function `B`... but why should `A` know about function `C` failures? That breaks the _abstraction_ contract between functions and couples `A` to `C`.
 
-> A function creates a contract with a caller by specifying the precondition and postcondition. Inputs and outputs.
-> The function _abstracts_ the caller from the implementation details. If the caller needs to know how the _callee_ 
+{: .box-note}
+A function creates a contract with a caller by specifying the precondition and postcondition. Inputs and outputs.
+The function _abstracts_ the caller from the implementation details. If the caller needs to know how the _callee_
 is implemented, then the abstraction is broken and probably the contract is broken as well.
 
 ### Status code vs exceptions
@@ -387,7 +388,8 @@ information can be passed as part of the result we are going to use a well known
 The `Either` type has two possible values, a `Right` value as in the _right_ thing to do and a `Left` value
 (commonly used to hold the value for failure or error).
 
-> Many languages already have this concept as part of the core language. `Go` returns a _tuple_ where the second
+{: .box-note}
+Many languages already have this concept as part of the core language. `Go` returns a _tuple_ where the second
 component is the error. `Rust` has a `Result` type to represent possible failures. `Swift` also
 has a `Result` type.
 
