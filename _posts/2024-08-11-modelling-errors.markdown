@@ -3,7 +3,9 @@ layout: post
 title: To model or not to model errors, that is the question!
 subtitle: Handle errors without hurting your code
 date: 2024-08-12 00:34:00 -0700
-categories: modeling
+tags: errors
+splash: Photo by <a href="https://unsplash.com/@cadop?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Mathew Schwartz</a> on <a href="https://unsplash.com/photos/greyscale-photography-of-skeleton-8rj4sz9YLCI?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
+cover-img: assets/img/skull-thinking.jpg
 ---
 
 {: .box-warning}

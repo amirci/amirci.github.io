@@ -1,20 +1,25 @@
 ---
 layout: post
-title:  "Refactoring multiple updates with reduce"
+title:  Refactoring multiple updates with reduce
 date:   2024-04-02 00:16:58 -0700
-categories: refactoring
+subtitle: Small functions to the rescue!
+tags: refactoring
+something: Photo by <a href="https://unsplash.com/@pablogt?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Pablo Hernández</a> on <a href="https://unsplash.com/photos/a-plate-of-food-95cl8vePOf4?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
+cover-img: assets/img/taquitos.jpg
 ---
 
-## Introduction
-
+{: .box-warning}
 The refactoring story today is about a UI editor for a table of _Students_ that lets a user
 add, rename, and remove columns.
+
+## Introduction
 
 The result of an operation is a series of changes that have to be applied and saved to the database.
 
 I will skip the _React_ portion of the code and focus on how to model the changes with types and simplify the update process.
 
-NOTE: The code uses [fp-ts](https://gcanti.github.io/fp-ts/) types and functions. You can see the functions and namespaces imported at the top.
+{: .box-note}
+The code uses [fp-ts](https://gcanti.github.io/fp-ts/) types and functions. You can see the functions and namespaces imported at the top.
 
 If you wish to play with the code I have created a public [repl.it](https://replit.com/@amirci/2024-04-02-Refactor-using-reduce?v=1) that can be forked.
 
@@ -386,13 +391,13 @@ const updateTables =
 
 ### Deleting columns
 
-Let's see how it would look to use `updateTables` with `deleteCol`. 
+Let's see how it would look to use `updateTables` with `deleteCol`.
 
 Two functions are needed, one to update the columns and one to update the values:
 
 #### A function that updates the columns
 
-To update the columns collection the function needs to take the columns and return a new collection 
+To update the columns collection the function needs to take the columns and return a new collection
 without the _target_ column name.
 
 I will use the `filter` function from the `ReadOnlyArray` module in [fp-ts](https://gcanti.github.io/fp-ts/modules/ReadonlyArray.ts.html#filter) to _remove_ the _target_ column returning a collection without it.
@@ -445,7 +450,7 @@ const addCol: ChangeMapFn<AddColumn> = ({ target }) => updateTables(ROA.append(t
 
 ```
 
-And voila! Now the functions are more descriptive and much easier to read and understand.
+And voila! Now the functions are more descriptive and much easier to understand.
 
 ## Putting it all together
 
