@@ -1,15 +1,17 @@
 ---
 layout: post
-title: "To model or not to model errors, that is the question!"
+title: To model or not to model errors, that is the question!
+subtitle: Handle errors without hurting your code
 date: 2024-08-12 00:34:00 -0700
 categories: modeling
 ---
 
+{: .box-warning}
+When coding, handling errors is an inevitable challenge. We've all faced the question: What if this bit of code fails? But beyond just anticipating potential failures, how do we effectively communicate to others who might use our code that certain errors are expected? Moreover, what kinds of errors are possible?
+
 ## Introduction
 
-When coding, handling errors is an inevitable challenge. We've all faced the question: What if this bit of code fails? But beyond just anticipating potential failures, how do we effectively communicate to others who might use our code that certain errors are expected? Moreover, what kinds of errors are always possible?
-
-To explore this, we'll use a function as a representative example—a self-contained piece of code that can be called upon when needed.
+To explore this, we will use a function as a representative example of a self-contained piece of code that can be called upon when needed.
 
 A function is fundamentally defined by two main components: input and output.
 
@@ -153,7 +155,8 @@ def important_function(arg1, arg2, ...argN)
 
 Seems reasonable that the precondition is validated before calling the function. Having said that, a `try` block would work too but then we pay the price of the exception mechanism kicking in.
 
-> Other languages that enforce types
+{: .box-note}
+Other languages that enforce types
 could offer a bit more safety by making a invalid scenario not possible and use a type to represent the valid values
 of the domain that can be used. For example a `NonZeroNumber` type
 to represent the _divisor_ could be defined. Still the problem now is shifted to how to construct a `NonZeroNumber`.
@@ -262,11 +265,13 @@ documenting what kind of failures are possible in a postcondition is part of our
 Exceptions are great when we need to skip many calls and bubble up the stack, but they are not meant as a mechanism
 to communicate failure.
 
-> Languages like Java classify exceptions into checked and not checked exceptions. Checked exceptions have to be
+{: .box-note}
+Languages like Java classify exceptions into checked and not checked exceptions. Checked exceptions have to be
 declared in the signature of the function and the only way to get rid of it is either add it to the signature of
 the caller function or use a `try` and `catch` block.
 
-> Kotlin in contrast, was designed also with exceptions but they are all _unchecked_. No need to add the exception 
+{: .box-success}
+Kotlin in contrast, was designed also with exceptions but they are all _unchecked_. No need to add the exception
 declaration in the signature of the function.
 
 ### Same exception different functions
