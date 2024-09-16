@@ -595,7 +595,7 @@ def fetch_subscription(customer_info: CustomerInformation) -> Either[ApiCallErro
 
 ### Saving the info to the database
 
-The last function that we need to implement is to store the customer information in the database:
+The last function that we need to implement has to store the customer information in the database:
 
 ```python
 @either_try
@@ -608,7 +608,7 @@ def persist_customer_information(user_id: UserId, customer_info: CustomerInforma
 
 The problem is that we need the current user ID (the user logged in to the application) and the customer information.
 
-That breaks a the _chaining_ pattern we were hoping to implement because the output of fetching the active subscription does not include the customer information.
+This change in types breaks the _chaining_ pattern we were hoping to implement because the output of fetching the active subscription does not include the customer information.
 
 I could change the order of the functions and _persist the information_ before confirming a valid subscription exists.
 From the _flow_ point of view, the association between user ID and customer information should not change.
@@ -743,11 +743,11 @@ def request_handler(request: Request):
 
 I see the following benefits when using the `Either` type:
 
-* The code is very declarative and improved for readability.
+* The code is very declarative and optimized for readability.
 * The function flow is clear, easy to follow.
 * Each function has explicit errors, forcing the caller to handle result if it is an error.
-* All errors are handled coinciding with the [error analysis](#error-analysis) done at the beginning.
-* The code uses exceptions as errors when convenient; no need to wrap it in another exception.
+* All errors are handled and the responses coincide with the [error analysis](#error-analysis) done at the beginning.
+* The code uses exceptions as errors when convenient; no need to create extra exceptions.
 * Logging is handled in a central place without extra effort.
 * Changing how the errors should be converted to a response is a simple change.
 
