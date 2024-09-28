@@ -63,11 +63,10 @@ sequenceDiagram
 Errors depend on context. Who decides what is an error and what is not? Was the error _expected_ or _unexpected_? We discussed
 these [ideas in the previous post]({% link _posts/2024-08-11-modelling-errors.markdown %}#modeling-expected-failure) exploring _pure_ and _impure_ functions.
 
-Here is the first version of the code without any error modeling and handling. This is a good to start to identify points of failure:
-
+This is an initial solution to the mentioned problem, without incorporating any error modeling or handling. It is a useful starting point for identifying potential failure sources:
 
 {: .box-note}
-Across the code, I will use type hints sometimes to make types and functions clear.
+I will use type hints intermittently in the code to make the types and functions clearer.
 
 
 ```python
@@ -89,15 +88,14 @@ def request_handler(request: Request):
     return redirect_to_dashboard(active_subscription)
 ```
 
-And here is the same code with comments highlighting possible sources of errors:
-
+Here is the same code with comments pointing out potential error sources:
 
 ```python
 def request_handler(request: Request):
     """
-    Uses the token passed in the url to fetch the user information,
-    find an active contract and update the database with the user information for future use.
-    Returns a valid subscription or an error that is TBD
+    Uses the token passed in the url to fetch the user information.
+    Finds an active contract and updates the database with the user information for future use.
+    Returns a valid subscription or an error that is yet TBD
     """
 
     # What if the token is not present?
@@ -120,7 +118,7 @@ def request_handler(request: Request):
     return redirect_to_dashboard(active_subscription)
 ```
 
-The following table summarizes the possible errors for the flow depicted above:
+The following table summarizes the possible errors in the flow outlined above:
 
 | Function                    | Error Scenario           |
 | `extract_token_from_url`    | Token missing or invalid |
@@ -139,18 +137,18 @@ The following table summarizes the possible errors for the flow depicted above:
 | `persist_customer_information` | Unknown error           |
 | Any other error             | Unknown error            |
 
-Let us think about what information is needed for each error and how it affects the response from the handler.
 
-From the telemetry point of view, when an _unexpected_ error happens, having information that could help diagnose what the problem was will be useful. All the _unexpected_ errors should be _logged_, with enough context to understand what happened. For example, if the response of an API does not conform to the expected schema logging only a message such as `"Schema validation error"` is not enough to determine which API was called nor what the problem was.
-
-Logging extra information could be useful. But to define the response, we need to think from the user's perspective.
-
-Showing errors that are completely disconnected from the current activity (like an API validation error or a database error) may confuse the user. Only expected errors must show notices, like issues with the subscription or problems with the token sent from the marketplace website. Any other error that is not related to the subscription or the token will be shown as a generic message without details.
+Let us consider the necessary information for each error and how it affects the handler’s response.
 
 
-The response, if an error happens, will be a _redirect_ to the landing page, including in the URL an error code that indicates to the caller what happened.
+From a telemetry perspective, unexpected errors should be logged with enough context for diagnosis. For example, logging just `"Schema validation error"` is not enough without identifying the affected API. However, when defining user responses, errors unrelated to the current activity, like API or database errors, could potentially confuse users.
 
-Here is the same table as above, but now including the response in the last column:
+Only relevant errors, like subscription issues, should display detailed notices, while others should present generic messages
+
+
+The response for an error, will be a _redirect_ to the landing page, including in the URL as a parameter an error code that indicates to the caller what happened.
+
+Here is the above table updated with the response from the _handler_ in the last column:
 
 | Function                    | Error Scenario           | Redirect Response |
 | extract_token_from_url      | Token missing or invalid | Token missing or invalid |
@@ -172,7 +170,8 @@ Here is the same table as above, but now including the response in the last colu
 
 ## Modeling errors using exceptions
 
-Let us tackle one [function](#and-here-is-the-same-code-with-comments-highlighting-possible-so) at a time:
+We will add for each [function](#and-here-is-the-same-code-with-comments-highlighting-possible-so)
+one or more `Exceptions` that represent the possible errors:
 
 
 ### extract_token_from_url
@@ -283,11 +282,13 @@ def request_handler(request: Request):
     # ... the rest of the code
 ```
 
-{: .box-danger}
-We are converting `ClientError` into another exception, but we do not use it. It is logged and then returned as an internal error.
 
 {: .box-warning}
-The handler knows that `exchange_customer_information` will throw a `ValidationError`. This creates coupling with the implementation of the function. A better idea could be to capture the error with a more meaningful exception. Unfortunately that also means extra work.
+The handler anticipates that `exchange_customer_information` will raise a `ValidationError`, which introduces coupling to the function’s implementation. A better approach might be to handle the error with a more meaningful exception. However, this requires additional effort.
+
+{: .box-warning}
+On the other hand, the function `exchange_customer_information` converts the `ClientError` exception into an `ExternalApiError` exception; but the information is not utilized. The exception is logged and then returned as an internal error.
+
 
 ### fetch_subscription
 
