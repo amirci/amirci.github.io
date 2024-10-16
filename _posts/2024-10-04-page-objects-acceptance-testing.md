@@ -36,7 +36,7 @@ test.describe('When the user logs in', () => {
 
 Using the _react testing library_ is similar and we will talk about that a bit later.
 
-### Looking great ... right?
+### Looking great! Right?
 
 At first glance, this test looks fine. It directly targets the `#username`, `#password`, and `#login-button` elements on the page. However, the test is tightly coupled to the current implementation of the login page, meaning it depends heavily on the exact IDs or classes of those elements. If the page changes—whether it’s a redesign, a change in naming conventions, or even a refactor that alters the HTML structure—this test will break.
 
@@ -59,13 +59,12 @@ For applications with hundreds of pages, this maintenance cost becomes unmanagea
 
 #### Repetition
 
-Multiple test may access the same portion of the page to assert different scenarios, for example a test that checks for a successful login and another test that checks for a login that fails:
+Multiple test may access the same portion of the page to assert different scenarios. For example a scenario could check for a successful login and another scenario validate an invalid login:
 
 ```js
 test.describe('When the user logs in', () => {
-
   test.describe('And the user is already registered', () => {
-    test('The dashboard is displayed and a message notifies the user', async () => {
+    test('The dashboard is displayed and a message notifies the user', async ({ page }) => {
       // Given
       const { user, passwrod } = await createRegisteredUser();
       await page.goto('https://example.com/landing');
@@ -81,7 +80,7 @@ test.describe('When the user logs in', () => {
   })
 
   test.describe('And the user does not have an account', () => {
-    test('A message is displayed notifying the user', async () => {
+    test('A message is displayed notifying the user', async ({ page }) => {
       // Given
       const { user, password } = await createNotRegisteredUser()
       await page.goto('https://example.com/landing');
@@ -92,67 +91,134 @@ test.describe('When the user logs in', () => {
       await page.click('#login-button');
 
       // Then
-      await expect(page).toHaveURL('https://example.com/dashboard');
+      await expect(page.getByTestId('not-registered-message')).toBeInTheDocument();
     })
   })
 
   test.describe('And the user (some other scenario)', () => {
-    // this scenario will repeat again
+    // this scenario will repeat again most of the code
+    // from the previous tests
   })
 })
 ```
 
-Code repetition is problematic because it leads to harder maintenance, as any changes must be made in multiple places, increasing the risk of inconsistencies. It also makes the code more difficult to read and understand, and can lead to more bugs over time.
+Code repetition is problematic because it leads to harder maintenance, as any changes must be made in multiple places, increasing the risk of inconsistencies. It also can lead to more bugs over time.
 
 
 #### Readability woes
 
-Using third party libraries is quite common. For example using [react-toastify](https://github.com/fkhadra/react-toastify) to show a message to the user after a successful login. The test may look like:
+Using third party libraries is quite common. For example the [react-toastify](https://github.com/fkhadra/react-toastify) package can be used to show a message to the user after a successful login.
+
+Let us assume the generated HTML for the toast would look like this:
+
+```html
+<div role="alert" class="Toastify__toast-body">
+  <div class="Toastify__toast-icon Toastify--animate-icon Toastify__zoom-enter">
+    <svg viewBox="0 0 24 24" width="100%" height="100%" fill="var(--toastify-icon-color-warning)">
+      <path d="M...."></path>
+    </svg>
+   </div>
+   <div>The marketplace token is missing.</div>
+</div>
+```
+
+Then we could write a test that uses a _locator_ for the element with _class_ `Toastify__toast-body` that also contains the expected message in the inner HTML:
 
 ```js
 test.describe('When the user logs in', () => {
-  test('The dashboard is displayed and a message notifies the user', () => {
+  test('The dashboard is displayed and a message notifies the user', ({ page }) => {
     // Given
-    // a user and a password stored in the database
+    const { user, passwrod } = await createRegisteredUser();
+    await page.goto('https://example.com/landing');
 
     // When
-    // here is all the setup
+    await page.fill('#username', user);
+    await page.fill('#password', password);
+    await page.click('#login-button');
+
+    // Then
+    // The message includes the email
+    const message = `Welcome ${email}, good to see you!`;
+    // Find the element with the toastify class that also contains the expected message
+    const located = page.locator('.Toastify__toast').filter({ hasText: message })
+    expect(located).toBeInTheDocument();
   })
 
 })
 ```
+Well-structured tests not only ensure functionality but also serve as documentation that guides future development and collaboration.
 
-#### Why is this a problem?
-
-* Frequent Test Failures: UI elements are subject to change frequently. Frontend developers might update element IDs, switch the structure of forms, or introduce new elements to improve accessibility or responsiveness. Each of these changes can cause a test to fail, even though the core functionality of the page remains unchanged.
-
-* High Maintenance Costs: Every time a developer changes an element's ID or modifies the layout, all tests that reference that specific element need to be updated. For large applications, this can result in modifying hundreds or even thousands of tests, making maintenance cumbersome.
-
-* Brittle Tests: Coupling tests to specific implementation details makes them brittle. Small, non-functional changes to the user interface, like renaming a button or changing an input field’s ID, can cause an entire suite of tests to fail even though the core user behavior hasn’t changed. This leads to time spent on "false negatives"—tests that fail due to superficial changes rather than true bugs.
-
-* Reduced Readability: Tests that reference specific elements directly often read like implementation details rather than focusing on user intent. For example, await page.click('#login-button') speaks about clicking a specific button, but doesn’t explain the broader context—such as logging in.
+Writing tests that are easy to read, that use terms that are part of the domain under test (for example: login with a registered user, navigate to landing, display a welcome message) is crucial because they clearly express the intended behavior of the code leaving implementation details aside, making it easier for developers to understand the scenario being tested and making it straightforward to discuss with stakeholders.
 
 ## Solution through abstraction
 
-To address these issues, we need to introduce one or more abstractions (Page Object Models, POMs for short), which decouple the tests from the underlying page implementation. Instead of having tests directly reference specific elements, you encapsulate the page interactions in a separate data type.
+To address these issues, we need to introduce one or more abstractions (Page Object Models, POMs for short), which decouple the tests from the underlying page implementation. Instead of having tests directly reference specific elements, the object will encapsulate the page interactions using terms that belong to the _domain_.
 
+### Let the test drive
 
-This abstraction means that the tests no longer care about specific selectors or HTML structures—they care about the business logic and user interactions.
+One way to approach discovering how to create the POMs for the page is to start writing the tests as if we would like to tell a story
+that stakeholders could understand:
 
-Let us build this data type using the same example as before:
+```gherkin
+Given I am on the landing page
+When I login with a registered user
+Then I see my user's dashboard
+And the application displays a welcome message
+```
+
+Looking good! Let us try to put in _playwright_ terms:
 
 ```js
-const { test, expect } = require('@playwright/test');
+test.describe('When the user logs in', () => {
+  test('The dashboard is displayed and a message notifies the user', ({ page }) => {
+    // Given
+    const user = await createRegisteredUser();
+    await Landing.open(page);
 
-test('User can log in', async ({ page }) => {
-  await page.goto('https://example.com/landing');
-  await page.fill('#username', 'testuser');
-  await page.fill('#password', 'password123');
-  await page.click('#login-button');
-  await expect(page).toHaveURL('https://example.com/dashboard');
-});
+    // When
+    await Landing.loginWith(user, page);
+
+    // Then
+    Dashboard.verify(page);
+    expect(Dashboard.welcomeMessage(user.email, page)).toBeInTheDocument();
+  })
+})
+```
+
+Now we are talking! Let us see if we addressed the problems we identified in the [first section]():
+
+
+The next step is to write the implementation. This is straightforward now the we have how we want to use it:
+
+```js
+const Landing = {
+  function open(page) {
+    return page.goto('https://example.com/landing');
+  },
+
+  async function loginWith({ email, password }, page) {
+    await page.fill('#username', user);
+    await page.fill('#password', password);
+    await page.click('#login-button');
+  }
+}
+
+
+const Dashboard = {
+  async function verify(page) {
+    await expect(page).toHaveURL('https://example.com/dashboard');
+  },
+
+  function welcomeMessage(email, page) {
+    const message = `Welcome ${email}, good to see you!`;
+    return page.locator('.Toastify__toast').filter({ hasText: message })
+  }
+}
 
 ```
+
+### You said objects... by I see no classes
+
 
 ## Conclusion
 
