@@ -15,9 +15,9 @@ Testing web applications effectively can be challenging, especially as they grow
 
 ## Introduction
 
-Testing tools (like [playwright](https://playwright.dev/) for end to end testing or [react testing library](https://testing-library.com/docs/react-testing-library/intro/) combined with [jest](https://jestjs.io/) for unit testing) provide APIs to make testing web applications less complex and accessible.
+Testing tools (like [playwright](https://playwright.dev/) for end-to-end testing or [react testing library](https://testing-library.com/docs/react-testing-library/intro/) combined with [jest](https://jestjs.io/) for unit testing) provide APIs to make testing web applications less complex and accessible.
 
-Here is an example of an end to end test using _Playwright_ to illustrate what the APIs looks like:
+Here is an example of an end-to-end test using _Playwright_ to illustrate what the APIs look like:
 
 ```js
 const { test, expect } = require('@playwright/test');
@@ -53,13 +53,13 @@ Imagine your development team decides to refactor the login page, and they chang
 <button id="submit-button">Log In</button>
 ```
 
-Suddenly, your entire test suite could break because every test that interacts with #login-button now needs to be updated. This might require going through all the tests where this button is used and manually changing the selector. Even though the behavior of the page is the same (a user can still log in), all the tests that reference this specific selector will fail.
+Suddenly, your entire test suite could break because every test that interacts with #login-button must be updated. This might require going through all the tests where this button is used and manually changing the selector. Even though the behavior of the page is the same (a user can still log in), all the tests that reference this specific selector will fail.
 
-For applications with hundreds of pages, this maintenance cost becomes unmanageable and causes teams to spend excessive time on test upkeep rather than focusing on actual testing and delivering value.
+For applications with hundreds of pages, this maintenance cost becomes unmanageable and teams spend excessive time on test upkeep rather than focusing on actual testing and delivering value.
 
 #### Code repetition
 
-Multiple test may access the same portion of the page to assert different scenarios. For example a scenario could check for a successful login and another scenario validate an invalid login:
+Multiple tests may access the same portion of the page to assert different scenarios. For example, a scenario could check for a successful login and another scenario could validate invalid login:
 
 ```js
 test.describe('When the user logs in', () => {
@@ -107,7 +107,7 @@ Code repetition is problematic because it leads to harder maintenance, as any ch
 
 #### Readability woes
 
-Using third party libraries is quite common. For example the [react-toastify](https://github.com/fkhadra/react-toastify) package can be used to show a message to the user after a successful login.
+Using third-party libraries is quite common. For example, the [react-toastify](https://github.com/fkhadra/react-toastify) package can be used to show a message to the user after a successful login.
 
 Let us assume the generated HTML for the toast would look like this:
 
@@ -148,7 +148,7 @@ test.describe('When the user logs in', () => {
 ```
 Well-structured tests not only ensure functionality but also serve as documentation that guides future development and collaboration.
 
-Writing tests that are easy to read, that use terms that are part of the domain under test (for example: login with a registered user, navigate to landing, display a welcome message) is crucial because they clearly express the intended behavior of the code leaving implementation details aside, making it easier for developers to understand the scenario being tested and making it straightforward to discuss with stakeholders.
+Writing tests that are easy to read, and use terms that are part of the domain under test (for example: login with a registered user, navigate to landing, display a welcome message) is crucial because they clearly express the intended behavior of the code leaving implementation details aside, making it easier for developers to understand the scenario being tested and making it straightforward to discuss with stakeholders.
 
 ## Solution through abstraction
 
@@ -193,7 +193,7 @@ Now we are talking! Let us see if we addressed the problems we identified in the
 * Reads like a story? ✔
 
 
-The next step is to write the implementation. This is straightforward now the we have a clear "specification" on how we want to use each function:
+The next step is to write the implementation. This is straightforward now that we have a clear "specification" on how we want to use each function:
 
 ```js
 const Landing = {
@@ -222,7 +222,7 @@ const Dashboard = {
 
 ```
 
-### You said objects... by I see no classes
+### You said objects... but I see no classes
 
 I prefer to stay away from _Classes_ and mutable _state_. There is no _state_ to share between function calls so having an object with function properties will suffice.
 
@@ -232,7 +232,7 @@ Choose the style that suits you (and your team) best. Create objects, create [cu
 
 What about a page that has multiple complex parts, can we use POMs too? Of course! It is an exercise of component design. Just keep creating different objects that are part of bigger objects.
 
-In this case `loginWith` is a function but if _login_ would be a whole section of the page that has a "remember me" option, or "reset my password" functionality it could be converted to its own nested object doing something like:
+In this case `loginWith` is a function but if _login_ would be a whole section of the page that has a "remember me" option, or "reset my password" functionality it could be converted to a nested object doing something like this:
 
 ```js
 const Landing = {
