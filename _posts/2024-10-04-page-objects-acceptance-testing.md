@@ -114,11 +114,11 @@ Let us assume the generated HTML for the toast would look like this:
 ```html
 <div role="alert" class="Toastify__toast-body">
   <div class="Toastify__toast-icon Toastify--animate-icon Toastify__zoom-enter">
-    <svg viewBox="0 0 24 24" width="100%" height="100%" fill="var(--toastify-icon-color-warning)">
+    <svg viewBox="0 0 24 24" width="100%" height="100%" fill="var(--toastify-icon-color-info)">
       <path d="M...."></path>
     </svg>
    </div>
-   <div>The marketplace token is missing.</div>
+   <div>Welcome user@test.com, good to see you!</div>
 </div>
 ```
 
@@ -249,7 +249,7 @@ const Landing = {
 
 ### What about unit testing?
 
-Testing using the [react testing library](https://testing-library.com/docs/react-testing-library/intro/) is quite similar. Using POMs can be implemented almost the same way but there won't be a `page` to pass around. 
+Testing using the [react testing library](https://testing-library.com/docs/react-testing-library/intro/) is quite similar. Creating POMs can be implemented almost the same way but there won't be a `page` to pass around. 
 
 The main difference is that when _rendering_ a component the dependencies may require a bit more code to setup and perhaps make the POMs a bit more complex. 
 
