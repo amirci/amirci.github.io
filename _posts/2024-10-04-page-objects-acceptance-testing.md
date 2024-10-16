@@ -40,7 +40,7 @@ Using the _react testing library_ is similar and we will talk about that a bit l
 
 At first glance, this test looks fine. It directly targets the `#username`, `#password`, and `#login-button` elements on the page. However, the test is tightly coupled to the current implementation of the login page, meaning it depends heavily on the exact IDs or classes of those elements. If the page changes—whether it’s a redesign, a change in naming conventions, or even a refactor that alters the HTML structure—this test will break.
 
-#### Impact of changes in the HTML
+#### Impact of HTML changes
 
 Imagine your development team decides to refactor the login page, and they change the `#login-button` to `#submit-button` to follow a more standardized naming convention:
 
@@ -57,7 +57,7 @@ Suddenly, your entire test suite could break because every test that interacts w
 
 For applications with hundreds of pages, this maintenance cost becomes unmanageable and causes teams to spend excessive time on test upkeep rather than focusing on actual testing and delivering value.
 
-#### Repetition
+#### Code repetition
 
 Multiple test may access the same portion of the page to assert different scenarios. For example a scenario could check for a successful login and another scenario validate an invalid login:
 
@@ -156,8 +156,8 @@ To address these issues, we need to introduce one or more abstractions (Page Obj
 
 ### Let the test drive
 
-One way to approach discovering how to create the POMs for the page is to start writing the tests as if we would like to tell a story
-that stakeholders could understand:
+One way to approach POMs inception for the system under test is to start writing the tests as if we would like to tell a story
+that stakeholders could understand. Using [the Gherkin language](https://cucumber.io/docs/gherkin/reference/) that would look like something like this:
 
 ```gherkin
 Given I am on the landing page
@@ -166,7 +166,7 @@ Then I see my user's dashboard
 And the application displays a welcome message
 ```
 
-Looking good! Let us try to put in _playwright_ terms:
+Looking good! Let us try to write it in _playwright_ terms:
 
 ```js
 test.describe('When the user logs in', () => {
@@ -185,10 +185,15 @@ test.describe('When the user logs in', () => {
 })
 ```
 
-Now we are talking! Let us see if we addressed the problems we identified in the [first section]():
+Now we are talking! Let us see if we addressed the problems we identified in the [first section](#impact-of-html-changes):
+
+* Avoids code repetition? ✔
+* Abstracts from HTML implementation? ✔
+* Uses terms from the actual domain? ✔
+* Reads like a story? ✔
 
 
-The next step is to write the implementation. This is straightforward now the we have how we want to use it:
+The next step is to write the implementation. This is straightforward now the we have a clear "specification" on how we want to use each function:
 
 ```js
 const Landing = {
@@ -219,11 +224,20 @@ const Dashboard = {
 
 ### You said objects... by I see no classes
 
+I prefer to stay away from _Classes_ and mutable _state_. There is no _state_ to share between function calls so having an object with function properties will suffice.
+
+Choose the style that suits you in which you feel more comfortable writing the tests. As long as they read nicely the investment will be worth it.
+
+### What about unit testing?
+
+Testing using the [react testing library](https://testing-library.com/docs/react-testing-library/intro/) is quite similar. Using POMs can be implemented almost the same way but there won't be a `page` to pass around. 
+
+The main difference is that when _rendering_ a component the dependencies may require a bit more code to setup and perhaps make the POMs a bit more complex. 
 
 ## Conclusion
 
-Abstracting your tests with Page Objects in Playwright is a best practice that simplifies test maintenance, improves readability, and makes your tests more resilient to changes in the UI. By isolating page-specific logic in separate classes, you minimize duplication and ensure that changes in the UI impact only the relevant Page Objects, rather than every test.
+Abstracting tests with POMs is an excellent practice that simplifies test maintenance, improves readability, and makes your tests more resilient to changes in the UI. By isolating page-specific logic in separate (meaningful) objects, you minimize duplication and ensure that changes in the UI impact only the relevant Page Objects, rather than every test.
 
-Playwright, with its flexibility and powerful APIs, pairs perfectly with the Page Object Model to create robust, scalable, and maintainable test suites. This approach not only makes your tests easier to read and manage but also future-proofs them against inevitable changes to the application.
+Playwright, with its flexibility and powerful APIs, pairs perfectly with the _Page Object Model_ to create robust, scalable, and maintainable test suites. This approach not only makes your tests easier to read and manage but also future-proofs them against inevitable changes to the application.
 
 Now, next time your web app changes, your tests won't break—just update the abstraction layer, and you're good to go!
