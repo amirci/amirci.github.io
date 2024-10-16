@@ -226,7 +226,7 @@ const Dashboard = {
 
 I prefer to stay away from _Classes_ and mutable _state_. There is no _state_ to share between function calls so having an object with function properties will suffice.
 
-Choose the style that suits you in which you feel more comfortable writing the tests. As long as they read nicely the investment will be worth it.
+Choose the style that suits you (and your team) best. Create objects, create [custom matchers](https://playwrightsolutions.com/creating-custom-expects-in-playwright-how-to-write-your-own-assertions/) to simplify assertions, be descriptive. As long as the tests read nicely the investment will be worth it.
 
 ### What about unit testing?
 
