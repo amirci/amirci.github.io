@@ -228,6 +228,25 @@ I prefer to stay away from _Classes_ and mutable _state_. There is no _state_ to
 
 Choose the style that suits you (and your team) best. Create objects, create [custom matchers](https://playwrightsolutions.com/creating-custom-expects-in-playwright-how-to-write-your-own-assertions/) to simplify assertions, be descriptive. As long as the tests read nicely the investment will be worth it.
 
+### Composition is your friend
+
+What about a page that has multiple complex parts, can we use POMs too? Of course! It is an exercise of component design. Just keep creating different objects that are part of bigger objects.
+
+In this case `loginWith` is a function but if _login_ would be a whole section of the page that has a "remember me" option, or "reset my password" functionality it could be converted to its own nested object doing something like:
+
+```js
+const Landing = {
+  login: {
+    function with(email, page) { ... },
+
+    function rememberMe(page) { ... },
+
+    function resetPassword(page) { ... }
+  }
+}
+
+```
+
 ### What about unit testing?
 
 Testing using the [react testing library](https://testing-library.com/docs/react-testing-library/intro/) is quite similar. Using POMs can be implemented almost the same way but there won't be a `page` to pass around. 
@@ -236,8 +255,8 @@ The main difference is that when _rendering_ a component the dependencies may re
 
 ## Conclusion
 
-Abstracting tests with POMs is an excellent practice that simplifies test maintenance, improves readability, and makes your tests more resilient to changes in the UI. By isolating page-specific logic in separate (meaningful) objects, you minimize duplication and ensure that changes in the UI impact only the relevant Page Objects, rather than every test.
+Abstracting tests with POMs is an excellent practice that simplifies test maintenance, improves readability, and makes your tests more resilient to changes in the UI. By isolating page-specific logic in separate (meaningful) objects, you minimize duplication and ensure that changes in the UI impact only the relevant _Page Object_, rather than every test.
 
-Playwright, with its flexibility and powerful APIs, pairs perfectly with the _Page Object Model_ to create robust, scalable, and maintainable test suites. This approach not only makes your tests easier to read and manage but also future-proofs them against inevitable changes to the application.
+Playwright, pairs perfectly with the _Page Object Model_ to create robust, scalable, and maintainable test suites. This approach not only makes your tests easier to read and manage but also future-proofs them against inevitable changes to the application.
 
 Now, next time your web app changes, your tests won't break—just update the abstraction layer, and you're good to go!
