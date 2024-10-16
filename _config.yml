@@ -34,8 +34,10 @@ theme: beautiful-jekyll-theme
 plugins:
   - jekyll-feed
   - jekyll-spaceship
-  - jekyll-paginate
   - jekyll-sitemap
+
+kramdown:
+  input: GFM
 
 exclude:
   - CHANGELOG.md
@@ -67,6 +69,10 @@ footer-hover-col: "#0085A1"
 
 site-css:
   - "/assets/css/style.css"
+
+site-js:
+  - "https://cdn.jsdelivr.net/npm/anchor-js/anchor.min.js"
+  - "/assets/js/anchors.js"
 
 share-links-active:
   twitter: true

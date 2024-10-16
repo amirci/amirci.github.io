@@ -88,7 +88,9 @@ def request_handler(request: Request):
     return redirect_to_dashboard(active_subscription)
 ```
 
+{: .anchored }
 Here is the same code with comments pointing out potential error sources:
+
 
 ```python
 def request_handler(request: Request):
@@ -170,7 +172,7 @@ Here is the above table updated with the response from the _handler_ in the last
 
 ## Modeling errors using exceptions
 
-We will add for each [function](#and-here-is-the-same-code-with-comments-highlighting-possible-so)
+We will add for each [function](#here-is-the-same-code-with-comments-pointing-out-potential-error)
 one or more `Exceptions` that represent the possible errors:
 
 
