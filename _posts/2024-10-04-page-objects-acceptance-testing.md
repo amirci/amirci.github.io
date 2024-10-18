@@ -66,7 +66,7 @@ test.describe('When the user logs in', () => {
   test.describe('And the user is already registered', () => {
     test('The dashboard is displayed and a message notifies the user', async ({ page }) => {
       // Given
-      const { user, passwrod } = await createRegisteredUser();
+      const { user, password } = await createRegisteredUser();
       await page.goto('https://example.com/landing');
 
       // When
@@ -128,7 +128,7 @@ Then we could write a test that uses a _locator_ for the element with _class_ `T
 test.describe('When the user logs in', () => {
   test('The dashboard is displayed and a message notifies the user', ({ page }) => {
     // Given
-    const { user, passwrod } = await createRegisteredUser();
+    const { user, password } = await createRegisteredUser();
     await page.goto('https://example.com/landing');
 
     // When
@@ -197,11 +197,11 @@ The next step is to write the implementation. This is straightforward now that w
 
 ```js
 const Landing = {
-  function open(page) {
+  open(page) {
     return page.goto('https://example.com/landing');
   },
 
-  async function loginWith({ email, password }, page) {
+  async loginWith({ email, password }, page) {
     await page.fill('#username', user);
     await page.fill('#password', password);
     await page.click('#login-button');
@@ -210,11 +210,11 @@ const Landing = {
 
 
 const Dashboard = {
-  async function verify(page) {
+  async verify(page) {
     await expect(page).toHaveURL('https://example.com/dashboard');
   },
 
-  function welcomeMessage(email, page) {
+  welcomeMessage(email, page) {
     const message = `Welcome ${email}, good to see you!`;
     return page.locator('.Toastify__toast').filter({ hasText: message })
   }
@@ -226,7 +226,7 @@ const Dashboard = {
 
 I prefer to stay away from _Classes_ and mutable _state_. There is no _state_ to share between function calls so having an object with function properties will suffice.
 
-Choose the style that suits you (and your team) best. Create objects, create [custom matchers](https://playwrightsolutions.com/creating-custom-expects-in-playwright-how-to-write-your-own-assertions/) to simplify assertions, be descriptive. As long as the tests read nicely the investment will be worth it.
+Choose the style that suits you (and your team) best. Create objects, create [custom matchers](https://playwrightsolutions.com/creating-custom-expects-in-playwright-how-to-write-your-own-assertions/) to simplify assertions and be descriptive. As long as the tests read nicely the investment will be worth it.
 
 ### Composition is your friend
 
@@ -237,11 +237,11 @@ In this case `loginWith` is a function but if _login_ would be a whole section o
 ```js
 const Landing = {
   login: {
-    function with(email, page) { ... },
+    with(email, page) { ... },
 
-    function rememberMe(page) { ... },
+    rememberMe(page) { ... },
 
-    function resetPassword(page) { ... }
+    resetPassword(page) { ... }
   }
 }
 
