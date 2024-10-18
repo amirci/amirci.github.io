@@ -34,8 +34,20 @@ theme: beautiful-jekyll-theme
 plugins:
   - jekyll-feed
   - jekyll-spaceship
+  - jekyll-sitemap
+
+kramdown:
+  input: GFM
 
 exclude:
+  - CHANGELOG.md
+  - CNAME
+  - Gemfile
+  - Gemfile.lock
+  - LICENSE
+  - README.md
+  - screenshot.png
+  - docs/
   - .#*
 
 avatar: "/assets/img/avatar.png"
@@ -57,6 +69,40 @@ footer-hover-col: "#0085A1"
 
 site-css:
   - "/assets/css/style.css"
+
+site-js:
+  - "https://cdn.jsdelivr.net/npm/anchor-js/anchor.min.js"
+  - "/assets/js/anchors.js"
+
+share-links-active:
+  twitter: true
+  facebook: true
+  linkedin: true
+
+social-network-links:
+  email: "amir@barylko.com"
+  rss: true  # remove this line if you don't want to show an RSS link at the bottom
+  github: amirci
+  facebook: amirbarylko
+  twitter: abarylko
+  linkedin: amirbarylko
+
+# Default YAML values (more information on Jekyll's site)
+defaults:
+  -
+    scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+      comments: true  # add comments to all blog posts
+      social-share: true # add social media sharing buttons to all blog posts
+  -
+    scope:
+      path: "" # any file that's not a post will be a "page" layout by default
+    values:
+      layout: "page"
+
 
 # Exclude from processing.
 

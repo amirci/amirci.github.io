@@ -4,8 +4,8 @@ title:  Refactoring multiple updates with reduce
 date:   2024-04-02 00:16:58 -0700
 subtitle: Small functions to the rescue!
 tags: refactoring
-something: Photo by <a href="https://unsplash.com/@pablogt?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Pablo Hernández</a> on <a href="https://unsplash.com/photos/a-plate-of-food-95cl8vePOf4?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
-cover-img: assets/img/taquitos.jpg
+img-credit: Photo by <a href="https://unsplash.com/@ilmatar?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Iza Gawrych</a> on <a href="https://unsplash.com/photos/a-group-of-blue-and-gold-vases-sitting-on-top-of-a-table-oL3O2PybLoo?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
+cover-img: assets/img/dolls.jpg
 ---
 
 {: .box-warning}
