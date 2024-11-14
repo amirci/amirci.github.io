@@ -10,7 +10,7 @@ cover-img: assets/img/house_model_code.png
 thumbnail-img: assets/img/house_model_code_tn.png
 ---
 
-{: .box-warning }
+{: .box-intro }
 Testing web applications effectively can be challenging, especially as they grow in complexity. As the application evolves, changes to the UI, components, or structure can require significant updates to the test suite. This often leads to a maintenance burden, where tests become brittle and harder to manage.
 
 ## Introduction

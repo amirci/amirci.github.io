@@ -9,7 +9,7 @@ credit-img: Photo by <a href="https://unsplash.com/@daniele_franchi?utm_content=
 cover-img: assets/img/left-right.jpg
 ---
 
-{: .box-warning }
+{: .box-intro }
 Using brief examples may suffice to introduce a concept because the explanation is short and easy to follow.
 However, short examples might leave us wondering, "What if we had to use error modeling in a real-world problem?"
 
