@@ -8,7 +8,7 @@ splash: Photo by <a href="https://unsplash.com/@cadop?utm_content=creditCopyText
 cover-img: assets/img/skull-thinking.jpg
 ---
 
-{: .box-warning}
+{: .box-intro }
 When coding, handling errors is an inevitable challenge. We've all faced the question: What if this bit of code fails? But beyond just anticipating potential failures, how do we effectively communicate to others who might use our code that certain errors are expected? Moreover, what kinds of errors are possible?
 
 ## Introduction

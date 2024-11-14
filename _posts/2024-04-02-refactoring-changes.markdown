@@ -8,7 +8,7 @@ img-credit: Photo by <a href="https://unsplash.com/@ilmatar?utm_content=creditCo
 cover-img: assets/img/dolls.jpg
 ---
 
-{: .box-warning}
+{: .box-intro }
 The refactoring story today is about a UI editor for a table of _Students_ that lets a user
 add, rename, and remove columns.
 
