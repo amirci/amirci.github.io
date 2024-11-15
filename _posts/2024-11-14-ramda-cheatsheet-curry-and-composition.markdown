@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Ramda cheatsheet - Curry and composition"
+title: "Ramda cheat sheet - Curry and friends"
 subtitle: Spicy, aromatic and very reusable
 tags: [ramda, curry, composition, functional-programming]
 mermaid: true
@@ -20,13 +20,13 @@ Functions can be passed to configure filters, lambdas can be created to define g
 
 We are talking about languages like Kotlin, Rust, Python, Javascript, Ruby and many others. That is a lot of power in your hands.
 
-Though those languages may not be considered _Functional languages_ many of the techniques used in _functional languages_ can be really useful. These abstractions and patterns have been around for many years and have been honed and perfected for developers to use.
+Though those languages may not be considered _functional languages_ many of the techniques used in _functional languages_ can be really useful. These abstractions and patterns have been around for many years and have been honed and perfected for developers to use.
 
 Such a technique is _currying_.
 
 ## Cute food picture, but what is it?
 
-At the heart of the "programming with functions" tool-belt is wrapping a function in another function. That means using a function that takes a function as a parameter and returns a new function that behaves like the old one but with added functionality.
+At the heart of the "programming with functions" tool-belt lies the well known technique of wrapping a function in another function. That means using a function that takes a function as a parameter and returns a new function that behaves like the old one but with added functionality.
 
 That's a mouthful! Let us see it in action:
 
@@ -74,5 +74,133 @@ assert(8, addTwo(6));
 ```
 
 
+## That doesn't sound real world
 
+I hear you. Let us use an example for a `React` reducer hook with a reducer function. This is the example from last blog post:
+
+```js
+const studentReducer = (oldState, action) => {
+  switch (action.type) {
+    case 'student_changed':
+      return changeStudentEvent(action.fieldName, action.value, oldState);
+    case 'fetching_id_started':
+      return fetchingIdStartedEvent(oldState);
+    case 'fetching_id_finished':
+      return fetchingIdFinishedEvent(action.newId, oldState);
+  }
+  throw Error('Invalid action: ' + action.type);
+};
+```
+
+Each action _type_ matches with calling a function as follows:
+
+* `"student_changed"` calls `changeStudentEvent`
+* `"fetching_id_started"` calls `fetchingIdStartedEvent`
+* `"fetching_id_finished"` calls `fetchingIdFinishedEvent`
+
+Also, let us note that all three functions coincide on two things: the last argument and the return value.
+
+What if instead of passing a type with information that has to be decoded into which function to call we would have a way to pass directly the _actual_ action to call?
+
+First, let us use `curry` for each of the event functions:
+
+```js
+const changeStudentEvent = R.curry((fieldName, value, oldState) => .... )
+
+const fetchingIdStartedEvent = ... // same as before
+
+const fetchingIdFinishedEvent = R.curry((newId, oldState) => .... )
+```
+
+Using the new definitions let us update the reducer function:
+
+
+```js
+const studentReducer = (oldState, action) => {
+  targetFn = null;
+
+  switch (action.type) {
+    case 'student_changed':
+      targetFn = changeStudentEvent(action.fieldName, action.value);
+    case 'fetching_id_started':
+      targetFn = fetchingIdStartedEvent;
+    case 'fetching_id_finished':
+      targetFn = fetchingIdFinishedEvent(action.newId);
+  }
+
+  if(targetFn) {
+    return targetFn(oldState);
+  }
+
+  throw Error('Invalid action: ' + action.type);
+};
+```
+
+Good idea, but we are still using an _event_ that needs to be translated into a function. We could do something better:
+
+```js
+const studentReducer = (oldState, actionFn) => {
+  return actionFn(oldState);
+};
+```
+
+And change the calls to the `dispatch` functions to take advantage of the curried functions, the whole code can be found [here](https://stackblitz.com/edit/vitejs-vite-hp9p47?file=src%2FStudentForm.jsx):
+
+```jsx
+const StudentForm = (reducerFn = studentReducer) => {
+  // State to store student data
+  const [state, dispatch] = useReducer(reducerFn, initialState);
+
+  // Handle form input change
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    dispatch(changeStudentEvent(name, type === 'checkbox' ? checked : value));
+  };
+
+  useEffect(() => {
+    const finishLoading = (newId) => {
+      dispatch(fetchingIdFinishedEvent(newId));
+    };
+    dispatch(fetchingIdStartedEvent);
+    setTimeout(finishLoading, 800, 123456);
+  }, []);
+
+  // .... the rest of the code
+}
+
+```
+
+There is no need for an event type and there is no need to validate the event, because each event is the actual function that needs to be called.
+
+## What's for dessert?
+
+Another scenario where `curry` can shine is where several functions are combined in a sequence of calls. That is commonly known as function composition.
+
+From the `Ramda` website we have the definition for [`compose`](https://ramdajs.com/docs/#compose):
+
+> Performs right-to-left function composition. The last argument may have any arity; the remaining arguments must be unary.
+
+```js
+const classyGreeting = (firstName, lastName) => "The name's " + lastName + ", " + firstName + " " + lastName
+const yellGreeting = R.compose(R.toUpper, classyGreeting);
+yellGreeting('James', 'Bond'); //=> "THE NAME'S BOND, JAMES BOND"
+
+R.compose(Math.abs, R.add(1), R.multiply(2))(-4) //=> 7
+```
+
+{: .box-warning }
+Languages like [`Haskell`](https://learnyouahaskell.com/higher-order-functions) have an infix function `.` (yes, it is a dot) to compose functions. That helps quite a bit with nested parenthesis and is similar to what we learn in school or university.
+
+An alternative function is [`pipe`](https://ramdajs.com/docs/#pipe):
+
+> Performs left-to-right function composition. The first argument may have any arity; the remaining arguments must be unary.
+
+```js
+const f = R.pipe(Math.pow, R.negate, R.inc);
+
+f(3, 4); // -(3^4) + 1
+```
+
+{: .box-warning }
+Languages like [F#](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/functions/#pipelines) have a _pipe operator_ (\|>). In [Clojure](https://clojure.org/) there is a [thread last](https://clojure.org/guides/threading_macros) macro that helps writing sequences of functions that take the result of the previous one. Even there is a proposal for [JS](https://github.com/tc39/proposal-pipeline-operator) to include a pipeline operator.
 
