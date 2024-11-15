@@ -22,7 +22,6 @@ class Jekyll < Thor
       post.puts 'credit-img: Photo by xxx'
       post.puts 'cover-img: assets/img/house_model_code.png'
       post.puts 'thumbnail-img: assets/img/house_model_code_tn.png'
-      post.puts " -"
       post.puts "---"
     end
 
