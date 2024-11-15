@@ -76,7 +76,7 @@ assert(8, addTwo(6));
 
 ## That doesn't sound real world
 
-I hear you. Let us use an example for a `React` reducer hook with a reducer function. This is the example from last blog post:
+I hear you. Let us use an example for a `React` reducer hook with a reducer function. This is the example from [last blog post]({{page.previous.url}}):
 
 ```js
 const studentReducer = (oldState, action) => {
@@ -204,3 +204,80 @@ f(3, 4); // -(3^4) + 1
 {: .box-warning }
 Languages like [F#](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/functions/#pipelines) have a _pipe operator_ (\|>). In [Clojure](https://clojure.org/) there is a [thread last](https://clojure.org/guides/threading_macros) macro that helps writing sequences of functions that take the result of the previous one. Even there is a proposal for [JS](https://github.com/tc39/proposal-pipeline-operator) to include a pipeline operator.
 
+
+### Show me the money
+
+Using the same example we used before from the [last post]({{page.previous.url}}) we could improve some of the functions that do the validation:
+
+```js
+// Returns a new state with errors if any
+const validateStudent = (state) => ...;
+
+// Returns a new state with the student field updated to the new value
+const updateStudent = (fieldName, newValue, state) => ...;
+
+// Returns a new state with the submit flag updated
+const updateSubmit = (state) => ...;
+
+// Applies validation, update student and update submit
+const changeStudentEvent = R.curry((fieldName, newValue, oldState) => {
+  return updateSubmit(
+    validateStudent(
+      updateStudent(fieldName, newValue, oldState)
+    )
+  );
+});
+```
+
+The last function combines the other three functions, let us review the signature of each function to see if they are a good fit for _composition_ (I'm using `State` as the type for the _state_):
+
+* `updateStudent` takes `(fieldName, newValue, oldState)` and returns a new `State`
+* `validateStudent` takes `oldState` and returns a new `State`
+* `updateSubmit` takes `oldState` and returns a new `State`
+
+From the `Ramda` documentation we know that:
+
+> The last argument may have any arity; the remaining arguments must be unary.
+
+Perfect match! Let us update the function! Remember the first function goes last:
+
+```js
+const changeStudentEvent = R.curry((fieldName, newValue, oldState) => {
+  const composed = R.compose(updateSubmit, validateStudent, updateStudent);
+  return composed(fieldName, newValue, oldState);
+});
+```
+
+I used an intermediate variable to create the function for illustration purposes. It is the same sequence as before and if you are somehow familiar with composition the sequence of calls is more explicit.
+
+Having said that, we could also use `pipe` that does not need to reverse the order and matches how we describe the sequence of actions:
+
+
+```js
+const changeStudentEvent = R.curry((fieldName, newValue, oldState) => {
+  const piped = R.pipe(updateStudent, validateStudent, updateSubmit);
+  return piped(fieldName, newValue, oldState);
+});
+```
+
+{: .box-warning }
+Functions that call another function with the same arguments can be simplified. When a function `f` calls `g` with the same arguments then `f == g` and can be replaced. For example `const f = (x) => g(x)` is equivalent to `const f = g`.
+
+That means that we could simplify the function further:
+
+
+```js
+const changeStudentEvent = R.curry(R.pipe(updateStudent, validateStudent, updateSubmit));
+```
+
+What if we would like to change `validateStudent` to be able to configure how long each field should be? Something like this:
+
+```js
+
+// Returns a new state with errors if any
+const validateStudent = (config, state) => ...;
+```
+
+That would break the composition, because is not a unary function any longer.
+
+Fear not loyal reader! You have `curry` <s>powder</s> _power_ in your tool-belt now!
