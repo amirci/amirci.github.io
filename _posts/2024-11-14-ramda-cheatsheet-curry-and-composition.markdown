@@ -14,7 +14,7 @@ The Ramda library is a cornucopia of utility functions. Curry is an extremely us
 
 ## Introduction
 
-Working with a language that supports high order functions (functions that can take as arguments functions or return functions as a result) make functions a very valuable tool in our arsenal.
+Working with languages that supports high order functions (functions that can take as arguments functions or return functions as a result) makes functions valuable tools in a developer’s toolkit.
 
 Functions can be passed to configure filters, lambdas can be created to define getters, functions can be passed tailor behavior for testing, functions can be returned to hide complex logic and much much more.
 
@@ -26,14 +26,14 @@ Such a technique is _currying_.
 
 ## Cute food picture, but what is it?
 
-At the heart of the "programming with functions" tool-belt lies the well known technique of wrapping a function in another function. That means using a function that takes a function as a parameter and returns a new function that behaves like the old one but with added functionality.
+At the heart of the "programming with functions" lies the well known technique of wrapping a function in another function. That means using a function that takes a function as a parameter and returns a new function that behaves like the old one but with added functionality.
 
 That's a mouthful! Let us see it in action:
 
 ```js
 const plus = (x, y) => x + y
 
-// we have a function that uses the other function
+// we define a function that utilizes the other function
 const addTwo = (y) => plus(2, y)
 
 assert(4, addTwo(2));
@@ -41,7 +41,7 @@ assert(8, addTwo(6));
 
 ```
 
-Have you ever looked at a function and thought:
+Ever looked at a function and thought:
 
 > Wow, that is almost what I need, if only I had the same function with one less parameter
 
@@ -75,7 +75,7 @@ assert(8, addTwo(6));
 
 ### Last but not least
 
-Sometimes is not the last argument that we would need to fix to a value, how can we use `curry` in that case?
+Sometimes, it's not the last argument that needs to have a fixed value, how can we use `curry` in that case?
 
 From the docs:
 
@@ -154,7 +154,7 @@ const studentReducer = (oldState, action) => {
 };
 ```
 
-Good idea! However, we are still using an _event_ that needs to be translated into a function. We could do something better:
+Good idea! However, we are still using an _event_ that needs to be translated into a function. We can simplify this further:
 
 ```js
 const studentReducer = (oldState, actionFn) => {
@@ -192,7 +192,7 @@ There is no need for an event type and there is no need to validate the event, b
 
 ## What's for dessert?
 
-Another scenario where `curry` can shine is where several functions are combined in a sequence of calls. That is commonly known as function composition.
+Another scenario where `curry` can shine is where several functions are combined in a sequence of calls. This technique is commonly known as function composition.
 
 From the `Ramda` website we have the definition for [`compose`](https://ramdajs.com/docs/#compose):
 
