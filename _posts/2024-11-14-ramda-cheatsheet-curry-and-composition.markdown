@@ -73,6 +73,24 @@ assert(4, addTwo(2));
 assert(8, addTwo(6));
 ```
 
+### Last but not least
+
+Sometimes is not the last argument that we would need to fix to a value, how can we use `curry` in that case?
+
+From the docs:
+
+> Secondly, the special placeholder value `R.__` may be used to specify "gaps", allowing partial application of any combination of arguments, regardless of their positions. If `g` is as above and `_` is `R.__`, the following are equivalent:
+
+```js
+g(1, 2, 3)
+g(_, 2, 3)(1)
+g(_, _, 3)(1)(2)
+g(_, _, 3)(1, 2)
+g(_, 2)(1)(3)
+g(_, 2)(1, 3)
+g(_, 2)(_, 3)(1)
+```
+
 
 ## That doesn't sound real world
 
@@ -98,11 +116,11 @@ Each action _type_ matches with calling a function as follows:
 * `"fetching_id_started"` calls `fetchingIdStartedEvent`
 * `"fetching_id_finished"` calls `fetchingIdFinishedEvent`
 
-Also, let us note that all three functions coincide on two things: the last argument and the return value.
+All three functions coincide on two things: the last argument and the return value.
 
-What if instead of passing a type with information that has to be decoded into which function to call we would have a way to pass directly the _actual_ action to call?
+What if, instead of passing a type with information that has to be decoded into __which function to call_ we would have a way to pass directly the _actual_ action to call?
 
-First, let us use `curry` for each of the event functions:
+First, let us use `curry` in some of the event functions:
 
 ```js
 const changeStudentEvent = R.curry((fieldName, value, oldState) => .... )
@@ -112,7 +130,7 @@ const fetchingIdStartedEvent = ... // same as before
 const fetchingIdFinishedEvent = R.curry((newId, oldState) => .... )
 ```
 
-Using the new definitions let us update the reducer function:
+Using the new definitions we could update the reducer function as follows:
 
 
 ```js
@@ -136,7 +154,7 @@ const studentReducer = (oldState, action) => {
 };
 ```
 
-Good idea, but we are still using an _event_ that needs to be translated into a function. We could do something better:
+Good idea! However, we are still using an _event_ that needs to be translated into a function. We could do something better:
 
 ```js
 const studentReducer = (oldState, actionFn) => {
@@ -270,10 +288,10 @@ That means that we could simplify the function further:
 const changeStudentEvent = R.curry(R.pipe(updateStudent, validateStudent, updateSubmit));
 ```
 
-What if we would like to change `validateStudent` to be able to configure how long each field should be? Something like this:
+Here is an idea, we could change `validateStudent` to be able to configure how long each field on the `Student` should be? Something like this:
+
 
 ```js
-
 // Returns a new state with errors if any
 const validateStudent = (config, state) => ...;
 ```
@@ -281,3 +299,102 @@ const validateStudent = (config, state) => ...;
 That would break the composition, because is not a unary function any longer.
 
 Fear not loyal reader! You have `curry` <s>powder</s> _power_ in your tool-belt now!
+
+First let us change `validateStudent` to be _curried_:
+
+
+```js
+// Returns a new state with errors if any
+const validateStudent = R.curry((config, state) => ...);
+```
+
+Now we can easily change the call to obtain a _unary_ function instead:
+
+
+```js
+const changeStudentEvent = R.curry(
+  R.pipe(
+    updateStudent,
+    validateStudent({firstName: {minLength: 10}, lastName: {minLength: 20}}),
+    updateSubmit
+  )
+);
+```
+
+## Any leftovers?
+
+Of course! A cornucopia remember?
+
+Both `pipe` and `compose` return a function, but why create a function first and then pass the argument?
+
+Once again, `Ramda` comes to your aid! The [flow](https://ramdajs.com/docs/#flow) function takes one argument and a collection of functions. From the documentation:
+
+> `flow` helps to avoid introducing an extra function with named arguments for computing the result of a function pipeline which depends on given initial values. Rather than defining a referential transparent function `f = (_x, _y) => R.pipe(g(_x), h(_y), …)` which is only later needed once `z = f(x, y)`, the introduction of `f`, `_x` and `_y` can be avoided: `z = flow(x, [g, h(y),…]`
+
+And here is the example:
+
+```js
+R.flow(9, [Math.sqrt, R.negate, R.inc]); //=> -2
+
+const personObj = { first: 'Jane', last: 'Doe' };
+const fullName = R.flow(personObj, [R.values, R.join(' ')]); //=> "Jane Doe"
+const givenName = R.flow('    ', [R.trim, R.when(R.isEmpty, R.always(fullName))]); //=> "Jane Doe"
+```
+
+### Something for the road
+
+Looking at the other functions in the code from [last blog post]({{ page.previous.url }}) we can see that all the functions that update the _state_ need to follow the requirements from the `React` _reducer hook_. The _state_ cannot be modified. That means that _updating_ the state has to be done by _copying_ the previous _state_ and overwriting the new values.
+
+That is _kind_ of easy in _Javascript_ by using the `...` notation (spread syntax) for arrays and objects.
+
+To copy the previous state and update the `errors` field as an empty array we could do something like:
+
+```js
+const newState = { ...oldState, errors: [] }
+
+```
+
+The code reads fine when is small and the property is not nested. Here is an update a bit more involved:
+
+```js
+const updateStudent = (fieldName, newValue, state) => {
+  return { ...state, student: { ...state.student, [fieldName]: newValue } };
+};
+
+```
+
+Luckily `Ramda` provides two functions to add elements to an object and return a copy, the first one is [`assoc`](https://ramdajs.com/docs/#assoc):
+
+> Makes a shallow clone of an object, setting or overriding the specified property with the given value. Note that this copies and flattens prototype properties onto the new object as well. All non-primitive properties are copied by reference.
+
+```js
+R.assoc('c', 3, {a: 1, b: 2}); //=> {a: 1, b: 2, c: 3}
+```
+
+And the second one is [`assocPath`](https://ramdajs.com/docs/#assocPath):
+
+> Makes a shallow clone of an object, setting or overriding the nodes required to create the given path, and placing the specific value at the tail end of that path. Note that this copies and flattens prototype properties onto the new object as well. All non-primitive properties are copied by reference.
+
+```js
+R.assocPath(['a', 'b', 'c'], 42, {a: {b: {c: 0}}}); //=> {a: {b: {c: 42}}}
+
+// Any missing or non-object keys in path will be overridden
+R.assocPath(['a', 'b', 'c'], 42, {a: 5}); //=> {a: {b: {c: 42}}}
+```
+
+This simplifies nested updates, it is more declarative and helps with copying the values.
+
+Here is the same `updateStudent` using `assocPath`:
+
+```js
+const updateStudent = (fieldName, newValue, state) =>
+  R.assocPath(['student', fieldName], newValue, state);
+
+```
+
+## Please give us some stars on your way out
+
+Small utility functions are a developer's Swiss army knife. Quite a few of them like `map`, `reduce`, `filter`, `zip`, `compose`, `pipe`, etc, are so well known that there is a very big chance they will appear somehow in a programming language.
+
+Getting familiar 
+Wow! What a 
