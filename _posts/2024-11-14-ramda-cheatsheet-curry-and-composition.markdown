@@ -392,9 +392,10 @@ const updateStudent = (fieldName, newValue, state) =>
 
 ```
 
-## Please give us some stars on your way out
+## Please give us some stars on your way out!
 
-Small utility functions are a developer's Swiss army knife. Quite a few of them like `map`, `reduce`, `filter`, `zip`, `compose`, `pipe`, etc, are so well known that there is a very big chance they will appear somehow in a programming language.
+Small utility functions are a developer's Swiss army knife. Quite a few of them like `map`, `reduce`, `filter`, `zip`, `compose`, `pipe`, etc, are so well known that there is a very big chance they will appear in a programming language.
 
-Getting familiar 
-Wow! What a 
+Getting familiar with such functions help to convey intent when writing code and may give you an advantage when working with a new language.
+
+
