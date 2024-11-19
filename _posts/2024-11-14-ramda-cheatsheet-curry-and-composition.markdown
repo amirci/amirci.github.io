@@ -14,9 +14,9 @@ The Ramda library is a cornucopia of utility functions. Curry is an extremely us
 
 ## Introduction
 
-Working with languages that supports high order functions (functions that can take as arguments functions or return functions as a result) makes functions valuable tools in a developer’s toolkit.
+Working with languages that supports high order functions (functions that can take as arguments functions or return functions as a result) makes using functions an extremely valuable tool in a developer’s toolkit.
 
-Functions can be passed to configure filters, lambdas can be created to define getters, functions can be passed tailor behavior for testing, functions can be returned to hide complex logic and much much more.
+Functions can be passed to configure filters, lambdas can be created to define getters, functions can be passed to tailor behavior for testing, functions can be returned to hide complex logic and much much more.
 
 We are talking about languages like Kotlin, Rust, Python, Javascript, Ruby and many others. That is a lot of power in your hands.
 
@@ -26,7 +26,7 @@ Such a technique is _currying_.
 
 ## Cute food picture, but what is it?
 
-At the heart of the "programming with functions" lies the well known technique of wrapping a function in another function. That means using a function that takes a function as a parameter and returns a new function that behaves like the old one but with added functionality.
+At the heart of the "programming with functions" (not functional programming but having functions as a first citizen of the language) lies the well known technique of wrapping a function in another function. That means using a function that takes a function as a parameter and returns a new function that behaves like the old one but with added functionality.
 
 That's a mouthful! Let us see it in action:
 
