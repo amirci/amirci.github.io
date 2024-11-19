@@ -24,6 +24,8 @@ email: amir@barylko.com
 description: >- # this means to ignore newlines until "baseurl:"
   This is my blog, thoughts, and musings
 
+url: "https://amirci.github.io"
+
 # Build settings
 #theme: minima
 theme: beautiful-jekyll-theme
