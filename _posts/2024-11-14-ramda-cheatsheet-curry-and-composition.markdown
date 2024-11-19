@@ -45,7 +45,7 @@ Ever looked at a function and thought:
 
 > Wow, that is almost what I need, if only I had the same function with one less parameter
 
-Exactly! [Ramda's curry](https://ramdajs.com/docs/#curry) it is the function for you!
+Exactly! [Ramda's curry](https://ramdajs.com/docs/#curry) is the function for you!
 
 From the docs:
 
@@ -58,7 +58,7 @@ g(1, 2)(3)
 g(1, 2, 3)
 ```
 
-Using it in the previous example would be something like this:
+Using it in the previous example would look something like this:
 
 ```js
 import * as R from 'ramda';
