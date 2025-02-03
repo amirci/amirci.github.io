@@ -1,6 +1,6 @@
 ---
 layout: post
-title: State management evolution&#58; Reducers and View Models (part I)
+title: State management evolution (part I)&#58; Reducers and View Models
 subtitle: A subject-observer extravaganza
 tags: [react, useState, useReducer]
 mermaid: true
