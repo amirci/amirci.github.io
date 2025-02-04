@@ -2,11 +2,11 @@
 layout: post
 title: "State management evolution (part II)&#58; Using MVVM"
 subtitle: A tongue twister that will blow your mind
-tags: [react]
+tags: [react view-model state]
 mermaid: true
-credit-img: Photo by xxx
-cover-img: assets/img/house_model_code.png
-thumbnail-img: assets/img/house_model_code_tn.png
+credit-img: Photo by https://unsplash.com/photos/brown-chillax-board-B6na4YFIecI
+cover-img: assets/img/chillax.jpg
+thumbnail-img: assets/img/chillax_tn.jpg
 ---
 
 
