@@ -115,25 +115,24 @@ const Counter = (vm) => {
 }
 ```
 
-The _ViewModel_ is _exactly_ what the component needs and the relationship is one to one making the relationship between them simpler.
+The ViewModel provides exactly what the component needs, establishing a one-to-one relationship that simplifies their interaction.
 
-Inside the _ViewModel_ we are free to use a _reducer_ hook or any other technology piece we see fit. However the implementation will stay hidden to the view.
+Inside the _ViewModel_, you are free to use a reducer hook or any other technology, with the implementation remaining hidden from the view. Testing becomes straightforward because the responsibilities of the View and ViewModel are clearly defined.
 
-The testing is straightforward because we understand at a glimpse the responsibilities of the _View_ and _ViewModel_ and how the should interact.
 
-## Back to the student form
+## Back to the Student Form
 
-The next section tackles modifying the student form to switch from a `useReducer` hook to a view model. All the code can be found [here](https://stackblitz.com/edit/vitejs-vite-gtr44uvm).
+In the next section, we modify the student form to switch from a useReducer hook to a _ViewModel_. You can find all the code [here](https://stackblitz.com/edit/vitejs-vite-gtr44uvm).
 
-To build a _ViewModel_ that provides only what the view needs we need to create an object that has:
+To build a _ViewModel_ that provides only what the view needs you must create an object that has:
 
-* Student information to display in the fields
-* A flat the identifies if the student ID is still loading
-* A flag that identifies if there are errors to display (that means we cannot submit the form)
-* Handle the change of the value of the fields
-* Handle the form submission
+* Student information to display in the fields.
+* A flat indicating whether the student ID is still loading.
+* A flag indicating if there are errors to display (which means the form cannot be submitted).
+* Handlers for changing the value of the fields.
+* A handler for form submission.
 
-In terms of a view model _hook_ I imagine a constructor that returns three values:
+For a view model _hook_, imagine a constructor that returns three values:
 
 ```jsx
 const StudentForm = ({viewModel = StudentFormViewModel}) => {
@@ -149,7 +148,7 @@ const StudentForm = ({viewModel = StudentFormViewModel}) => {
 
 ```
 
-Please note that we have moved already a good portion of the logic out of the view to the _ViewModel_ making the view smaller:
+Note that much of the logic has already been moved out of the view and into the ViewModel, which makes the view smaller:
 
 
 ```jsx
@@ -163,8 +162,7 @@ Please note that we have moved already a good portion of the logic out of the vi
   const handleSubmit = (e) => { ... };
 ```
 
-The `state` has not changed, here is a refresher:
-
+The state remains unchanged. Here is a refresher:
 
 ```js
 const initialState = {
@@ -180,7 +178,7 @@ const initialState = {
 
 ```
 
-The view logic has no changes, still uses the handlers to notify changes and get updates:
+The view logic does not change; it still uses handlers to notify changes and receive updates:
 
 ```jsx
 const StudentForm = ({viewModel = StudentFormViewModel}) => {
@@ -222,16 +220,15 @@ const StudentForm = ({viewModel = StudentFormViewModel}) => {
 
 ```
 
-The implementation of the view model is not important for now, feel free to take a look at the code.
+The implementation of the _ViewModel_ is not the focus right now; feel free to look at the code.
 
 
 ### Binding the values
 
-Another aspect of using a _ViewModel_ is the opportunity to _bind_ the parts of the view model to the view.
+Another benefit of using a _ViewModel_ is the ability to bind parts of the _ViewModel_ to the view. The _ViewModel_ can use its tailored nature to simplify the view's declaration.
 
-That means that the view model takes _advantage_ of his tailored nature and uses this knowledge to simplify further the view declaration.
+In the code above, it is evident that each field in the form requires a corresponding element in the _ViewModel_. This means that there is some repetition for each input field:
 
-By looking at the code above is evident that each field in the form needs to have a counterpart in the view model, that means that there will be some repetition on each `input` field:
 
 ```jsx
     <form onSubmit={handleForm}>
@@ -258,7 +255,8 @@ By looking at the code above is evident that each field in the form needs to hav
   </form>
 ```
 
-Using a function to bind the values will help to reduce boilerplate. A simple implementation could be to replace each handler in the view model with a function that will return the attributes needed for each field:
+Using a function to bind the values can reduce this boilerplate. A simple implementation replaces the handlers in the _ViewModel_ with functions that return the attributes needed for each field:
+
 
 ```jsx
 
@@ -269,7 +267,7 @@ const StudentForm = ({viewModel = StudentFormViewModel}) => {
 
 ```
 
-The function `bindInput` will be used for fields and `bindForm` for the whole form:
+The function `bindInput` is used for individual fields, and `bindForm` is used for the entire form:
 
 ```js
   <form {... bindForm()}>
@@ -286,7 +284,7 @@ The function `bindInput` will be used for fields and `bindForm` for the whole fo
 
 ```
 
-The _binding_ functions can connect the handlers inside the view model:
+The _binding_ functions connect the handlers inside the view model:
 
 ```jsx
   const bindInput = (name) => ({
@@ -299,7 +297,7 @@ The _binding_ functions can connect the handlers inside the view model:
 
 ```
 
-The binding helps to remove repetitive code and makes the view easier to follow:
+This binding approach reduces repetitive code and makes the view easier to follow:
 
 ```jsx
     <form {... bindForm()}>
@@ -324,34 +322,31 @@ The binding helps to remove repetitive code and makes the view easier to follow:
 
 ## Looks cool, but how do I choose?
 
-First there are a few good ideas that can be implemented no matter which pattern is used.
+There are good practices you can adopt regardless of the pattern you choose.
 
-### Passing an argument to the view
+### Passing an Argument to the View
 
-Either with a view model or a reducer function, passing it as a dependency to the component simplifies testing and helps to separate concerns and decoupling the business logic from the view.
+Whether using a _ViewModel_ or a reducer function, passing it as a dependency to the component simplifies testing and helps separate concerns, decoupling business logic from the view.
 
-### Using immutable state
+### Using Immutable State
 
-Having a state that cannot be modified will help to understand which parts of the code are actually generating changes. Clarity on where the changes occur simplify code maintenance, code reviews and testing.
+Using immutable state helps clarify which parts of the code are responsible for changes. This clarity simplifies maintenance, code reviews, and testing.
 
-### Tipping the scale
+## Tipping the Scale
 
-There is no harm in starting with a couple of states in the view and later evolve into a reducer and even later switch to a view model.
+There is no harm in starting with a couple of state variables in the view and evolving later into a reducer, and eventually, a _ViewModel_.
 
-If you realize that you need more than one or two states to represent the logic behind the view or the requirements have changed and the logic between states is becoming more complex it may be time to incorporate a _reducer_.
+If you find that you need more than one or two state variables to represent the view logic, or if the logic between states is becoming complex, it may be time to incorporate a reducer. If the number of reducer events grows and the code becomes harder to read, transitioning to a _ViewModel_ could be a great next step.
 
-When the events for the reducer are growing and the code is harder to read may be a great time to incorporate a _ViewModel_.
-
-Some guideline questions could be:
-
+Consider these guideline questions:
 * Is the complexity of the application growing?
-* How easy to test is the code?
-* Can my peers read the code and understand it on the first try?
-* How many dependencies are needed to implement the business logic?
+* How easy is it to test the code?
+* Can my peers read and understand the code on the first try?
+* How many dependencies are required to implement the business logic?
 
-If the answer to any of these questions takes more than one or two seconds or you hear a "it depends", then, it is time to move to the next level.
+If the answer to any of these questions takes more than a couple of seconds or if you find yourself saying "it depends," then it might be time to move to the next level.
 
-Unfortunately, each move to the next level has a cost. Using a view model seems to be a very comprehensive solution with lots of benefits but requires substantially more code that has to be designed, written and tested.
+Each move to a higher level of abstraction comes with a cost. While using a _ViewModel_ offers many benefits, it also requires substantially more code to design, write, and test.
 
-In time, with experience, it will become easier to predict which one to choose to start, foresee the benefits and identify anti-patterns early.
+Over time, experience will help you predict which approach to choose, foresee the benefits, and identify anti-patterns early.
 
